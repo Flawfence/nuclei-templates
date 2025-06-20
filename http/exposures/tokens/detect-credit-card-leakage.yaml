@@ -1,0 +1,40 @@
+id: detect-credit-card-leakage
+
+info:
+  name: Credit Card Data Leakage
+  author: Flawfence
+  severity: critical
+  description: |
+    Detects if the application leaks sensitive information such as credit card numbers,
+    expiration dates, or CVVs in a JSON response.
+  reference:
+    - https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure
+    - https://cwe.mitre.org/data/definitions/359.html
+
+requests:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "application/json"
+        part: header
+        condition: and
+
+      - type: regex
+        regex:
+          - '"credit_card":\s*"[0-9]{13,16}"'
+          - '"credit_card_expires":\s*"[0-9]{2}\/[0-9]{2}"'
+          - '"credit_card_cvv":\s*"[0-9]{3,4}"'
+        part: body
+        condition: or
+
+    extractors:
+      - type: regex
+        regex:
+          - '"credit_card":\s*"(.*?)"'
+          - '"credit_card_expires":\s*"(.*?)"'
+          - '"credit_card_cvv":\s*"(.*?)"'

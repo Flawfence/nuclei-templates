@@ -1,0 +1,103 @@
+id: stored-xss-flow
+
+info:
+  name: Stored XSS Detection with Single Request Injection (Dynamic Full Action URL)
+  author: Trackflaw
+  severity: high
+  tags: xss, storedxss, dast
+  description: |
+    Detects a stored XSS vulnerability by injecting a payload into all form fields except submit buttons
+    in a single request, checking for reflective patterns in the HTTP response.
+
+variables:
+  xssProof: "{{rand_int(10000, 99999)}}"
+  interactshCallback: "{{interactsh-url}}"
+  xssPayload: "PAYLOAD"
+
+flow: |
+  http("extract-fields");
+
+  let payloads = [];
+
+  for (let field of iterate(template["form_field_names"])) {
+    if (field.toLowerCase() !== "submit") {
+        payloads.push(`${field}={{xssPayload}}`);
+    } else {
+      payloads.push(`${field}=Submit`);
+    }
+  }
+  set("full_payload", payloads.join("&"));
+
+  let action_url = template["form_action"];
+  log(action_url)
+
+  if (action_url.startsWith("http")) {
+    // URL complète si action_url est absolue
+    set("full_url", action_url.join());
+
+  } else {
+    let full_url = "{{RootURL}}/" + action_url + "&"
+    //log(full_url)
+    set("full_url", full_url);
+  }
+
+  http("inject-payload");
+
+
+http:
+  - id: extract-fields
+    method: GET
+    path:
+      - "{{BaseURL}}"
+    headers:
+      Accept: "text/html"
+
+    extractors:
+      - type: regex
+        part: body
+        name: "form_field_names"
+        group: 1
+        internal: true
+        regex:
+          - name=["\']?([^"\'>]+)["\']?
+
+      - type: regex
+        part: body
+        name: "form_action"
+        group: 1
+        internal: true
+        regex:
+          - action=["\']?([^"\'>]+)["\']?
+
+  - id: inject-payload
+    method: POST
+    path:
+      - "{{full_url}}"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "{{full_payload}}"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "{{xssProof}}"
+
+      - type: word
+        part: header
+        words:
+          - "text/html"
+
+    extractors:
+      - type: regex
+        part: body
+        name: "xss_exploit_proof"
+        regex:
+          - "{{xssProof}}"
+
+      - type: regex
+        part: body
+        name: "interactsh_callback_proof"
+        regex:
+          - "{{interactshCallback}}"

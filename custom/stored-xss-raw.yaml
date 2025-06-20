@@ -1,0 +1,122 @@
+id: stored-xss-single-request
+
+info:
+  name: Stored XSS Detection with Single Request Injection (Dynamic Full Action URL & Method RAW)
+  author: Trackflaw
+  severity: high
+  tags: xss, storedxss, dast
+  description: |
+    Detects a stored XSS vulnerability by injecting a payload into all form fields except submit buttons
+    in a single request, checking for reflective patterns in the HTTP response.
+
+variables:
+  xssProof: "{{rand_int(10000, 99999)}}"
+  interactshCallback: "{{interactsh-url}}"
+  xssPayload: "PAYLOAD"
+  newHostname: "{{Hostname}}"
+
+flow: |
+  http(1);
+
+  let payloads = [];
+
+  for (let field of iterate(template["form_field_names"])) {
+    if (field.toLowerCase() !== "submit") {
+        payloads.push(`${field}={{xssPayload}}`);
+    } else {
+      payloads.push(`${field}=Submit`);
+    }
+  }
+  set("full_payload", payloads.join("&"));
+
+  let action_url = template["form_action"];
+
+  // POST default method
+  let method = template["form_method"].toUpperCase() || "POST";
+  set("method", method)
+
+  if (action_url.startsWith("http")) {
+    set("full_url", action_url);
+
+  } else {
+    let full_url = "{{RootURL}}/" + action_url
+    log(full_url)
+    set("full_url", full_url);
+  }
+
+  http(2);
+
+http:
+  # - id: extract-fields
+  - raw:
+      - |
+        GET {{BaseURL}} HTTP/1.1
+        Host: {{newHostname}}
+        Connection: close
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko)
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: en-US,en;q=0.9
+        Content-Type: application/x-www-form-urlencoded
+
+    extractors:
+      - type: regex
+        part: body
+        name: "form_field_names"
+        group: 1
+        internal: true
+        regex:
+          - name=["\']?([^"\'>]+)["\']?
+
+      - type: regex
+        part: body
+        name: "form_action"
+        group: 1
+        internal: true
+        regex:
+          - action=["\']?([^"\'>]+)["\']?
+
+      - type: regex
+        part: body
+        name: "form_method"
+        group: 1
+        internal: true
+        regex:
+          - method=["\']?(get|post|put|patch)["\']?
+
+  # - id: inject-payload
+  - raw:
+      - |
+        POST /test HTTP/1.1
+        Host: {{newHostname}}
+        Connection: close
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko)
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: en-US,en;q=0.9
+        Content-Type: application/x-www-form-urlencoded
+
+        {{full_payload}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "{{xssProof}}"
+
+      - type: word
+        part: header
+        words:
+          - "text/html"
+
+    extractors:
+      - type: regex
+        part: body
+        name: "xss_exploit_proof"
+        regex:
+          - "{{xssProof}}"
+
+      - type: regex
+        part: body
+        name: "interactsh_callback_proof"
+        regex:
+          - "{{interactshCallback}}"

