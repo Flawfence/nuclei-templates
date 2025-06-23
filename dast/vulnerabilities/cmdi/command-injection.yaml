@@ -17,8 +17,6 @@ info:
     cve-id: N/A
 
 variables:
-  # Random values for time-based detection
-  sleep_time: 5
   # Unique marker for output detection
   marker: "{{rand_text_alpha(8)}}"
 
@@ -225,6 +223,8 @@ http:
         - "%0A sleep [SLEEPTIME] %0A"
         - "%0D sleep [SLEEPTIME] %0D"
 
+    attack: pitchfork  # Required when using payloads with fuzzing
+
     # Time-based detection requests
     fuzzing:
       - part: query
@@ -236,18 +236,11 @@ http:
     # Time-based analyzer for verification
     analyzer:
       name: time_delay
-      parameters:
-        sleep_duration: 5
-        requests_limit: 4
-        time_correlation_error_range: 0.20
-        time_slope_error_range: 0.35
-
-    stop-at-first-match: true
 
     matchers:
       # Time-based detection
       - type: word
-        name: time-based-injection
         part: analyzer
+        name: time-based-injection
         words:
           - "true"

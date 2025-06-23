@@ -1,7 +1,7 @@
 id: lfi-keyed
 
 info:
-  name: LFI Detection - Keyed
+  name: Local File Inclusion
   author: pwnhxl
   severity: high
   reference:
