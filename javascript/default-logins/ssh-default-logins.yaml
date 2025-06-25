@@ -12,6 +12,10 @@ info:
 javascript:
   - pre-condition: |
       var m = require("nuclei/ssh");
+      // Extract host and port from Hostname (format: host:port)
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var Port = hostParts.length > 1 ? parseInt(hostParts[1], 10) : 22;
       var c = m.SSHClient();
       var response = c.ConnectSSHInfoMode(Host, Port);
       // only bruteforce if ssh allows password based authentication
@@ -22,14 +26,14 @@ javascript:
       c.Connect(Host,Port,Username,Password);
     args:
       Host: "{{Host}}"
-      Port: "22"
+      Hostname: "{{Hostname}}"
       Username: "{{usernames}}"
       Password: "{{passwords}}"
-    threads: 10
-    attack: pitchfork
+    threads: 20
+    attack: clusterbomb
     payloads:
-      usernames: helpers/wordlists/ssh-users.txt
-      passwords: helpers/wordlists/ssh-passwords.txt
+      usernames: helpers/wordlists/ssh-small-users.txt
+      passwords: helpers/wordlists/ssh-small-passwords.txt
     stop-at-first-match: true
     matchers:
       - type: dsl
