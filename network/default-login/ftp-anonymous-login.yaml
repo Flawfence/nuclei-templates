@@ -23,6 +23,8 @@ tcp:
       - "{{Hostname}}"
     port: 21
 
+    threads: 1
+
     matchers-condition: and
     matchers:
       - type: word

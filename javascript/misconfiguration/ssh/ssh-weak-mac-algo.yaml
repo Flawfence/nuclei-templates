@@ -16,6 +16,10 @@ info:
 
 javascript:
   - pre-condition: |
+      // Extract host and port from Hostname (format: host:port)
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var Port = hostParts.length > 1 ? parseInt(hostParts[1], 10) : 22;
       isPortOpen(Host,Port);
     code: |
       let m = require("nuclei/ssh");
@@ -24,7 +28,7 @@ javascript:
       Export(response);
     args:
       Host: "{{Host}}"
-      Port: "22"
+      Hostname: "{{Hostname}}"
 
     matchers-condition: and
     matchers:

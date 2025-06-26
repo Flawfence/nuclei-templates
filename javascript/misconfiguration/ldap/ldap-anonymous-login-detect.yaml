@@ -19,6 +19,10 @@ info:
 javascript:
   - code: |
       let ldap = require('nuclei/ldap');
+      // Extract host and port from Hostname (format: host:port)
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var Port = hostParts.length > 1 ? parseInt(hostParts[1], 10) : 389;
       let cfg = ldap.Config();
       cfg.Upgrade = true;
       let client = ldap.Client(Host, Port, cfg);
@@ -27,8 +31,9 @@ javascript:
       Export(metadata);
 
     args:
-      Host: "ldap://{{Host}}"
-      Port: 389
+      Host: "ldap://{{Host}}:{{Port}}"
+      Hostname: "{{Hostname}}"
+      Port: "389"
 
     matchers:
       - type: dsl

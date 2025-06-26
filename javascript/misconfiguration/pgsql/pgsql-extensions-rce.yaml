@@ -17,6 +17,10 @@ info:
   tags: postgresql,js,network,rce
 javascript:
   - pre-condition: |
+      // Extract host and port from Hostname (format: host:port)
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var Port = hostParts.length > 1 ? parseInt(hostParts[1], 10) : 5432;
       isPortOpen(Host,Port);
     code: |
       const postgres = require('nuclei/postgres');
@@ -30,7 +34,7 @@ javascript:
 
     args:
       Host: "{{Host}}"
-      Port: 5432
+      Hostname: "{{Hostname}}"
       User: "{{usernames}}"
       Pass: "{{password}}"
       Db: "{{database}}"
