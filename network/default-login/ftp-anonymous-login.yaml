@@ -21,7 +21,7 @@ tcp:
 
     host:
       - "{{Hostname}}"
-    port: 2121
+    port: 21
 
     matchers-condition: and
     matchers:

@@ -20,21 +20,25 @@ javascript:
       var response = c.ConnectSSHInfoMode(Host, Port);
       // only bruteforce if ssh allows password based authentication
       response["UserAuth"].includes("password")
+
     code: |
       var m = require("nuclei/ssh");
       var c = m.SSHClient();
       c.Connect(Host,Port,Username,Password);
+
     args:
       Host: "{{Host}}"
       Hostname: "{{Hostname}}"
-      Username: "{{usernames}}"
-      Password: "{{passwords}}"
+      Username: "{{username}}"
+      Password: "{{password}}"
+
     threads: 20
+
     attack: clusterbomb
     payloads:
-      usernames: helpers/wordlists/ssh-small-users.txt
-      passwords: helpers/wordlists/ssh-small-passwords.txt
-    stop-at-first-match: true
+      username: helpers/wordlists/small-users.txt
+      password: helpers/wordlists/small-passwords.txt
+      
     matchers:
       - type: dsl
         dsl:
