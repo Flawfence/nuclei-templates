@@ -16,6 +16,10 @@ info:
 
 javascript:
   - pre-condition: |
+      // Extract host and port from Hostname (format: host:port)
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var Port = hostParts.length > 1 ? parseInt(hostParts[1], 10) : 3306;
       isPortOpen(Host,Port);
     code: |
       let m = require('nuclei/mysql');
@@ -25,7 +29,7 @@ javascript:
 
     args:
       Host: "{{Host}}"
-      Port: "3306"
+      Hostname: "{{Hostname}}"
       Query: "SELECT DISTINCT user FROM mysql.user;"
       User: "{{usernames}}"
       Pass: "{{passwords}}"

@@ -4,6 +4,8 @@ info:
   name: MySQL - Show Databases
   author: DhiyaneshDk
   severity: high
+  description : |
+    MySQL servers was identified with weak authentication credentials. When default or commonly used username/password combinations (root, admin, mysql, test) allow successful authentication, the server is vulnerable to unauthorized access. The command "show databases" was executed and permited to enumerate all databases on the target system.
   reference:
     - https://nmap.org/nsedoc/scripts/mysql-databases.html
   metadata:
@@ -13,6 +15,10 @@ info:
   tags: js,mysql,network,enum
 javascript:
   - pre-condition: |
+      // Extract host and port from Hostname (format: host:port)
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var Port = hostParts.length > 1 ? parseInt(hostParts[1], 10) : 3306;
       isPortOpen(Host,Port);
     code: |
       let m = require('nuclei/mysql');
@@ -22,7 +28,7 @@ javascript:
 
     args:
       Host: "{{Host}}"
-      Port: "3306"
+      Hostname: "{{Hostname}}"
       Query: "show databases;"
       User: "{{usernames}}"
       Pass: "{{passwords}}"
