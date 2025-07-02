@@ -20,7 +20,7 @@ http:
   - raw:
     - |
       FIXME_METHOD FIXME_ACTION?FIXME_ARGUMENT HTTP/1.1
-      Host: {{Hostname}}
+      Host: {{Host}}
       Connection: close
       Cookie: FIXME_COOKIES
       Origin: {{BaseURL}}
@@ -61,6 +61,7 @@ http:
     headers:
       Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
       User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.59 Safari/537.36
+      Cookie: FIXME_COOKIES
 
     matchers-condition: and
     matchers:
