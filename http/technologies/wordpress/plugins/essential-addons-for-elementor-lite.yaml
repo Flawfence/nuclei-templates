@@ -1,7 +1,7 @@
 id: wordpress-essential-addons-for-elementor-lite
 
 info:
-  name: Essential Addons for Elementor – Popular Elementor Templates and Widgets Detection
+  name: Essential Addons for Elementor – Popular Elementor Templates & Widgets Detection
   author: ricardomaia
   severity: info
   reference:
@@ -46,4 +46,4 @@ http:
         part: body
         regex:
           - '(?i)Stable.tag:\s?([\w.]+)'
-# digest: 4a0a00473045022005d2bab7215b1607878d3fe1ba0106c3b2b14b88633f30574631045611584da7022100f9a26c8282cfe3aa0cdf2577a39c7d09c6fe27f94f34d7ea0d789e1b0965fbc1:922c64590222798bb761d5b6d8e72950
+# digest: 4a0a00473045022100d226f28abd9e4a5229302e1eea9018d83d77af70444f72589dfaac51cdd1d39e02203e00bd11fa378b8680a168b16c04677b6b48f30757cc7f554bb002e31683fdf6:922c64590222798bb761d5b6d8e72950
