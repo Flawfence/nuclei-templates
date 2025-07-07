@@ -1,0 +1,41 @@
+id: unencrypted-http-only-service
+
+info:
+  name: Unencrypted HTTP Only Service Detection
+  author: Flawfence
+  severity: medium
+  description: |
+    Identifies services that only support unencrypted HTTP communication, lacking HTTPS encryption. 
+    This vulnerability exposes sensitive data to potential interception during transmission.
+  tags: http,security,encryption,ssl
+  reference:
+    - https://owasp.org/www-community/vulnerabilities/Unencrypted_Data_Transport
+    - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: http-only
+        dsl:
+          - '"{{Scheme}}" == "http"'
+          - 'status_code >= 200 && status_code < 300'
+        condition: and
+
+      - type: dsl
+        name: insecure-redirect
+        dsl:
+          - 'status_code >= 300 && status_code < 400'
+          - 'contains(tolower(header), "location")'
+          - 'contains(tolower(header), "http://")'
+        condition: and
+    extractors:
+      - type: dsl
+        name: service-info
+        dsl:
+          - '"Unencrypted HTTP service detected on " + BaseURL'
