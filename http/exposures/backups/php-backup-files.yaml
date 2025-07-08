@@ -7,7 +7,7 @@ info:
   description: PHP Source File is disclosed to external users.
   metadata:
     max-request: 1512
-  tags: exposure,backup,php,disclosure,fuzz
+  tags: exposure,backup,php,disclosure
 
 http:
   - method: GET
@@ -17,6 +17,7 @@ http:
     attack: clusterbomb
     payloads:
       filepath:
+        - ""
         - /wp-config.php # wordpress
         - /wp-config # wordpress
         - /site/default/settings.php # drupal
@@ -75,6 +76,7 @@ http:
         - /const.DB.php
 
       bakext:
+        - ""
         - ".~"
         - ".bk"
         - ".bak"
@@ -114,7 +116,7 @@ http:
         part: body
         words:
           - "<?php"
-          - "<?="
+          - "<?PHP"
         condition: or
 
       - type: word
@@ -139,7 +141,42 @@ http:
       - type: word
         part: header
         words:
-          - "text/plain"
-          - "bytes"
-        condition: or
+            - "text/plain"
+            - "bytes"
+
+    extractors:
+      - type: regex
+        name: database_credentials
+        part: body
+        regex:
+          - "(?i)(password|pass|pwd)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+          - "(?i)(username|user|login)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+          - "(?i)(database|db_name|dbname)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+          - "(?i)(host|hostname|server)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+        group: 2
+
+      - type: regex
+        name: api_keys
+        part: body
+        regex:
+          - "(?i)(api_key|apikey|secret_key|secretkey)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+          - "(?i)(access_token|token)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+        group: 2
+
+      - type: regex
+        name: sensitive_paths
+        part: body
+        regex:
+          - "(?i)(path|dir|directory|root)\\s*[=:]\\s*['\"]([^'\"]+)['\"]"
+        group: 2
+
+      - type: dsl
+        name: file_info
+        dsl:
+          - '"File: " + filepath + bakext'
+          - '"Size: " + content_length'
+          - '"Status: " + status_code'
+          - '"Content: "+ body'  # First 100 characters of the body for preview
+
+
 # digest: 4a0a00473045022100da22b43b225ff93e47d3efab04ac1dcfc79134b9351058524e55679574f0c9fe02206d287ccf7a70536e2836ff395ab274196c67774f5ecf3abbc03bfc898576f6a0:922c64590222798bb761d5b6d8e72950
