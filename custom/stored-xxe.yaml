@@ -2,7 +2,7 @@ id: stored-xxe
 
 info:
   name: Stored XXE Detection
-  author: Trackflaw
+  author: Flawfence
   severity: high
   tags: xxe, storedxxe, dast
   description: |

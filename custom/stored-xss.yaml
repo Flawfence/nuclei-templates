@@ -2,7 +2,7 @@ id: stored-xss
 
 info:
   name: Stored XSS Detection
-  author: Trackflaw
+  author: Flawfence
   severity: high
   tags: xss, storedxss, dast
   description: |
