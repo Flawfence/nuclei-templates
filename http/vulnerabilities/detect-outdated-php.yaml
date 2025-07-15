@@ -1,0 +1,36 @@
+id: detect-outdated-php
+
+info:
+  name: Detect Very Outdated PHP Versions
+  author: Flawfence
+  severity: low
+  description: |
+    This template detects very outdated versions of PHP that might be vulnerable to known issues or exploits.
+  tags: php,version-detection,outdated
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "PHP/([0-5]\\.[0-9]+\\.[0-9]+)" 
+      - type: regex
+        part: header
+        regex:
+          - "PHP/([0-5]\\.[0-9]+\\.[0-9]+)"
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - "PHP/([0-5]\\.[0-9]+\\.[0-9]+)"
+      - type: regex
+        part: header
+        regex:
+          - "PHP/([0-5]\\.[0-9]+\\.[0-9]+)"
