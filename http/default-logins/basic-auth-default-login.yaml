@@ -1,0 +1,181 @@
+id: basic-auth-default-login
+
+info:
+  name: Basic Auth Default Password
+  author: Flawfence
+  severity: medium
+  description: |
+    This template attempts to fuzz default passwords on a Basic Authentication-protected endpoint.
+    It first checks if Basic Authentication is available on the endpoint and then tries to authenticate using a payload list of common default passwords.
+  tags: auth,default-login
+
+flow: http(1) && http(2)
+
+http:
+  - id: check-basic-auth
+    raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: status
+        status:
+          - 401
+        internal: true
+
+      - type: regex
+        regex:
+          - 'Www-Authenticate: Basic realm=".*"'
+        internal: true
+
+    extractors:
+      - type: regex
+        name: basic_realm
+        regex:
+          - 'Www-Authenticate: Basic realm="(.*?)"'
+        internal: true
+
+  - id: fuzz-basic-auth
+    raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: Basic {{base64(username + ":" + password)}}
+
+    attack: clusterbomb
+    payloads:
+      username:
+        - username
+        - admin
+        - root
+        - user
+        - guest
+        - test
+        - administrator
+        - manager
+        - supervisor
+        - support
+        - operator
+        - sysadmin
+        - demo
+        - info
+        - webmaster
+        - security
+        - backup
+        - developer
+        - service
+        - monitor
+        - maint
+        - default
+        - api
+        - ftp
+        - db
+        - postgres
+        - mysql
+        - oracle
+        - netadmin
+        - staff
+        - sales
+        - cisco
+        - public
+        - anonymous
+      password:
+        - username
+        - admin
+        - root
+        - user
+        - guest
+        - test
+        - administrator
+        - manager
+        - supervisor
+        - support
+        - operator
+        - sysadmin
+        - demo
+        - info
+        - webmaster
+        - security
+        - backup
+        - developer
+        - service
+        - monitor
+        - maint
+        - default
+        - api
+        - ftp
+        - db
+        - postgres
+        - mysql
+        - oracle
+        - netadmin
+        - staff
+        - sales
+        - cisco
+        - public
+        - anonymous
+        - password
+        - 123456
+        - 12345
+        - 1234
+        - 123
+        - pass
+        - qwerty
+        - letmein
+        - welcome
+        - changeme
+        - 12345678
+        - 123456789
+        - 111111
+        - 000000
+        - 123123
+        - 654321
+        - 1q2w3e4r
+        - abc123
+        - 1qaz2wsx
+        - qwertyuiop
+        - password1
+        - passw0rd
+        - admin123
+        - root123
+        - user123
+        - guest123
+        - test123
+        - admin@123
+        - welcome1
+        - welcome123
+        - qwe123
+        - zaq12wsx
+        - asdfgh
+        - 222222
+        - 333333
+        - 444444
+        - 555555
+        - 666666
+        - 777777
+        - 888888
+        - 999999
+        - abcdef
+        - abcdefg
+        - 1q2w3e
+        - 1q2w3e4r5t
+        - 123qwe
+        - 1qazxsw2
+        - 1q2w3e4r5t6y
+        - 1qaz2wsx3edc
+        - 1qaz2wsx3edc4rfv
+        - 1qaz2wsx!
+        - password123
+        - password!
+        - admin!
+        - root!
+        - user!
+        - guest!
+        - test!
+
+    matchers:
+      - type: status
+        negative: true
+        status:
+          - 401
