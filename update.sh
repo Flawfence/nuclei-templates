@@ -8,4 +8,4 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-git push origin main --force
+git push origin main
