@@ -22,3 +22,10 @@ http:
       - type: word
         words:
           - "RadAsyncUpload handler is registered succesfully"
+    
+    extractors:
+      - type: regex
+        name: telerik_fileupload_version
+        part: body
+        regex:
+          - 'RadAsyncUpload handler is registered succesfully'
