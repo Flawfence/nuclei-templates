@@ -3,7 +3,7 @@ id: telerik-fileupload-detect
 info:
   name: Detect Telerik Web UI Fileupload Handler
   author: Flawfence
-  severity: critical
+  severity: high
   description: This template detects the Telerik Web UI fileupload handler. Several vulnerabilities exist in this component, including arbitrary file upload and remote code execution. Several Proof-of-concept exploit exist for a .NET JSON deserialization vulnerability in Telerik UI for ASP.NET AJAX allowing remote code execution.
   reference:
     - https://github.com/noperator/CVE-2019-18935
