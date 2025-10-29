@@ -10,7 +10,7 @@ info:
     - https://teamviewer.com
   metadata:
     max-request: 1
-  tags: phishing,teamviewer,osint
+  tags: phishing,teamviewer,osint,discovery
 http:
   - method: GET
     path:
@@ -32,4 +32,4 @@ http:
       - type: dsl
         dsl:
           - '!contains(host,"teamviewer.com")'
-# digest: 4a0a0047304502204c145dedd1dd2c3660c4977e67c4d43c3bf6c0ae62facf968506c6be7596b9ef022100d44d2d7938fb58b2fd8cd149709f640f5969ea2d92e3df8d94bc67d5c43e4062:922c64590222798bb761d5b6d8e72950
+# digest: 4a0a00473045022100f7ea49fe029f6c630bcd30c3ed661f48886626b8b52a216c85b033934ea38540022020e834c60366e65759b2d6582594a486ff7b0b2a45c060fdc35f942abc3daaee:922c64590222798bb761d5b6d8e72950

@@ -10,7 +10,7 @@ info:
     - https://mcafee.com
   metadata:
     max-request: 1
-  tags: phishing,mcafee,osint
+  tags: phishing,mcafee,osint,discovery
 http:
   - method: GET
     path:
@@ -32,4 +32,4 @@ http:
       - type: dsl
         dsl:
           - '!contains(host,"mcafee.com")'
-# digest: 4a0a004730450220619445681a2a45fd79e332b3df3f218e8f9c7fb944f9333efe3f424b27438646022100dd299f4774ab790c735529d01c7534e17611c320b272e5935e90fbb64ebc1216:922c64590222798bb761d5b6d8e72950
+# digest: 4b0a00483046022100953c90813230b48668d521ae7b0e4f8a8647ae0e92a743634d35bc950024de77022100ab06eff510958f1458195e28a0ce5288e4b836334759942c9d2974eb49a8e745:922c64590222798bb761d5b6d8e72950

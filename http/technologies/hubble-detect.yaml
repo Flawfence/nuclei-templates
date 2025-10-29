@@ -13,7 +13,7 @@ info:
     verified: true
     max-request: 1
     shodan-query: http.title:"Hubble UI"
-  tags: tech,hubble,detect
+  tags: tech,hubble,detect,discovery
 
 http:
   - method: GET
@@ -27,4 +27,4 @@ http:
           - 'status_code == 200'
           - 'contains_any(to_lower(body), "<title>hubble ui enterprise", "<title>hubble ui")'
         condition: and
-# digest: 4a0a0047304502207159282c4b760bad6f6c4000b279ee9d2d79b70511f2ec7f5adb5a3984d1d008022100ca2fe1a474b0d8c341c1350f17a4baf4b15a7354826bfef57b582d358607161f:922c64590222798bb761d5b6d8e72950
+# digest: 4a0a00473045022100a111f770b17387e6e0c7008953f266415cdaa367eeea22e83f031494265466da02203192236749fa6104db172da8b96a5dca0d32a8709f428c033091e51404c8cbd6:922c64590222798bb761d5b6d8e72950

@@ -10,7 +10,7 @@ info:
     - https://skyscanner.net
   metadata:
     max-request: 1
-  tags: phishing,skyscanner,osint
+  tags: phishing,skyscanner,osint,discovery
 http:
   - method: GET
     path:
@@ -32,4 +32,4 @@ http:
       - type: dsl
         dsl:
           - '!contains(host,"skyscanner.net")'
-# digest: 4a0a004730450221008071d60e1be46ae7b7ec64f7a31b35eee612c0beb6e6ce7db8db73532ee581d602202679f5edead9cc165e7ff6f07061de98b1d6e9779e797ff61ef91902b4dc2692:922c64590222798bb761d5b6d8e72950
+# digest: 490a00463044022036093a723cd8ad1180d68e1e233298c039de67200e64532cefd63008da28fee40220678cc4dced8780b392856b172752501df11b3372e0b27fe5c3684458d34df975:922c64590222798bb761d5b6d8e72950

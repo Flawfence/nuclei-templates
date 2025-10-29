@@ -10,7 +10,7 @@ info:
     - https://paypal.com
   metadata:
     max-request: 1
-  tags: phishing,paypal,osint
+  tags: phishing,paypal,osint,discovery
 http:
   - method: GET
     path:
@@ -32,4 +32,4 @@ http:
       - type: dsl
         dsl:
           - '!contains(host,"paypal.com")'
-# digest: 4a0a004730450220473bb31cd69f5a6fc52548509f00beab5b429cbc55a9a694c5f24b1d73aec04c022100b09e8d15eed960af5c6e3ad639c2a45f410148b5b9ff5c847a3d79ac21b0b5dd:922c64590222798bb761d5b6d8e72950
+# digest: 490a0046304402201cf3fda6e73d471b5944639c349101d377a4242d52b67fccbd67f6e068a0e84c02200df90820e0ed89b91dc3609a3ae783b7a77785cb24023aa0b04957b49822d9ff:922c64590222798bb761d5b6d8e72950

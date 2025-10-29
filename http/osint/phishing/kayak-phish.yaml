@@ -10,7 +10,7 @@ info:
     - https://kayak.co.uk
   metadata:
     max-request: 1
-  tags: phishing,kayak,osint
+  tags: phishing,kayak,osint,discovery
 http:
   - method: GET
     path:
@@ -32,4 +32,4 @@ http:
       - type: dsl
         dsl:
           - '!contains(host,"kayak.co.uk")'
-# digest: 4a0a0047304502206646bf11c6cd42f7df8c6834933c606db6b880b812b1dce7f9caf682766f786f0221009ce0cc92936ab3c94689dcaf2442cac12841dd39e10fdfe67a231ebc175ec29d:922c64590222798bb761d5b6d8e72950
+# digest: 4a0a00473045022010f91b44f80a8fced2183f7325f313129877953b70cefa50fb3b4ae92bc97404022100d803ac32de72e1886509633e62ded45a3e4e7b046123cae59863302c4d67abbd:922c64590222798bb761d5b6d8e72950

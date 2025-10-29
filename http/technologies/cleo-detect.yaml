@@ -12,7 +12,7 @@ info:
     max-request: 1
     verified: true
     shodan-query: 'Server: Cleo'
-  tags: tech,detect,cleo
+  tags: tech,detect,cleo,discovery
 
 http:
   - method: GET
@@ -38,4 +38,4 @@ http:
           - "Cleo VLTrader/([0-9.]+)"
           - "Cleo Harmony/([0-9.]+)"
           - "Cleo LexiCom/([0-9.]+)"
-# digest: 4a0a004730450221008eb0b30a0e767f20153c5b5182d01822ca14050c883ecd07e2591c6a7cdceed002202ab497a4ed1810ce379198e31976e86688e7859e7ee44dd1070266f5ff7d1641:922c64590222798bb761d5b6d8e72950
+# digest: 4b0a00483046022100d97b28367b7e4dfd659e4ddf1276738b155ac9f04758502cf662bb0ba662c204022100a129bf501f1e00dd19168b1675c0b2bda7c9d66201e8354b3860aec52c7321c4:922c64590222798bb761d5b6d8e72950

@@ -10,7 +10,7 @@ info:
     - https://blender.org
   metadata:
     max-request: 1
-  tags: phishing,blender,osint
+  tags: phishing,blender,osint,discovery
 http:
   - method: GET
     path:
@@ -32,4 +32,4 @@ http:
       - type: dsl
         dsl:
           - '!contains(host,"blender.org")'
-# digest: 490a0046304402201c3836ecc3304279e7bb45fbdc6ae0568e84a0291f88f99fd107759db48773da02205b4e9f58425b55b6d0b35cc4730ce64553ee489c4d7cd646dc4ca9872368a077:922c64590222798bb761d5b6d8e72950
+# digest: 4a0a00473045022100fd4e50bb0948661c7b5cf3d1f8c6a65eb11baa492f24c07a75fc0a11997ec8a702206e01fa927ef0489808dcd3dd256255fd5491555f57b7ab86db642fb8a3ab6112:922c64590222798bb761d5b6d8e72950

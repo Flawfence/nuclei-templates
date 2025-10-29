@@ -12,7 +12,7 @@ info:
     verified: true
     max-request: 1
     shodan-query: http.html:"Login (Virtual Traffic Manager"
-  tags: detect,traffic-manager,panel,login
+  tags: detect,traffic-manager,panel,login,discovery
 
 http:
   - method: GET
@@ -29,4 +29,4 @@ http:
       - type: status
         status:
           - 200
-# digest: 4a0a00473045022075d7fde6b532347389b18a22cc0a420c73d1948b8db84e80d65bf09fa21d46a6022100b07d04410cb58ce0428726394c3aa4b200ead83a96fa7b825b5124dd6f648358:922c64590222798bb761d5b6d8e72950
+# digest: 490a00463044022019e932731a94fe2796c319add2e0fedc4d93df1233a42185dfe56c85164c876b0220453ae5f327c7cdd9053d7357e397c1a589d6543ff729dd42caf3a8642321b336:922c64590222798bb761d5b6d8e72950

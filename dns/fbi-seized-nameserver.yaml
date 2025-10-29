@@ -12,7 +12,7 @@ info:
     max-request: 1
     shodan-query: title:"THIS WEBSITE HAS BEEN SEIZED"
     fofa-query: title="THIS WEBSITE HAS BEEN SEIZED"
-  tags: dns,ns,darkweb,fbi,seized
+  tags: dns,ns,darkweb,fbi,seized,discovery
 
 dns:
   - name: "{{FQDN}}"
@@ -35,4 +35,4 @@ dns:
         group: 1
         regex:
           - "IN\\tNS\\t(.+)"
-# digest: 4a0a00473045022068b1f60df3d0a630b0b5e885eaab8101a5c3f03374ec60b02cb8dd2705284104022100b7fa22da202e56fde8b1f65bd7a35b6ae67d94d996363d5a9df165d70c7042c4:922c64590222798bb761d5b6d8e72950
+# digest: 4a0a0047304502203bfa4b127b9dd0676f2bef2f6a98437e138110c4fcd0fab7228b198c02b1455602210083c31901265fb5f043de7f01685f35fa46b7f0a5eb0abaa6ed031744dab24df3:922c64590222798bb761d5b6d8e72950

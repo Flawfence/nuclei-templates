@@ -13,7 +13,7 @@ info:
     max-request: 1
     verified: true
     shodan-query: http.html:"cockpit/static/login.css"
-  tags: panel,cockpit,login
+  tags: panel,cockpit,login,discovery
 
 http:
   - method: GET
@@ -47,4 +47,4 @@ http:
       - type: dsl
         dsl:
           - '"OS: " + os + " | Hostname: " + hostname'
-# digest: 4a0a00473045022100950ab2746ac14308a0fc319e351bc6571245eb3fa80927506d8149533abee2eb02206d8a99c3be46275867adb38a2aba34a0f3289b6dabf1656f9dfbdafb60855a36:922c64590222798bb761d5b6d8e72950
+# digest: 490a00463044022058e737a0040f1dff037c1810b3a2d1150d3af25958d1aaa5965e57fd0cba4d10022071bc8a3e7c36d1d434ce845d574203486aa56fc4b88019dc4ca87d770bd7a320:922c64590222798bb761d5b6d8e72950
