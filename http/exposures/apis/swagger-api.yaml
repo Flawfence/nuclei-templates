@@ -3,7 +3,7 @@ id: swagger-api
 info:
   name: Public Swagger API - Detect
   author: pdteam,c-sh0,AmirHossein Raeisi,Eduardo Quintanilha
-  severity: info
+  severity: low
   description: |
     Public Swagger API was detected.
   reference:
