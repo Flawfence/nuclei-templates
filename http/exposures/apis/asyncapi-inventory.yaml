@@ -3,7 +3,7 @@ id: asyncapi-inventory
 info:
   name: AsyncAPI Spec Inventory
   author: hamzasahin61
-  severity: info
+  severity: low
   description: |
     Detected publicly accessible AsyncAPI specification files (YAML/JSON), which might have exposed message channels, server endpoints, and security schemes.
   reference:

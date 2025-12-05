@@ -3,7 +3,7 @@ id: seafile-api
 info:
   name: Seafile API - Detect
   author: righettod
-  severity: info
+  severity: low
   description: |
     Seafile API was detected.
   reference:

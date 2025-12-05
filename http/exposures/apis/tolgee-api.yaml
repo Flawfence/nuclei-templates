@@ -3,7 +3,7 @@ id: tolgee-api
 info:
   name: Tolgee API - Detect
   author: matejsmycka
-  severity: info
+  severity: low
   description: Tolgee API was detected.
   reference:
     - https://docs.tolgee.io/api

@@ -3,7 +3,7 @@ id: jeecg-boot-swagger
 info:
   name: Jeecg Boot Swagger Bootstrap UI - Detect
   author: ritikchaddha
-  severity: info
+  severity: low
   description: Jeecg Swagger Bootstrap UI exposed.
   classification:
     cpe: cpe:2.3:a:jeecg:jeecg-boot:*:*:*:*:*:*:*:*

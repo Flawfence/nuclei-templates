@@ -3,7 +3,7 @@ id: redoc-api-docs
 info:
   name: ReDoc API Docs - Detect
   author: Hamza Sahin
-  severity: info
+  severity: low
   description: |
     ReDoc API documentation interface is available without authentication, potentially exposing information about the API endpoints.
   reference:

@@ -3,7 +3,7 @@ id: redfish-api
 info:
   name: Redfish API - Detect
   author: righettod
-  severity: info
+  severity: low
   description: |
     Redfish API was detected.
   reference:

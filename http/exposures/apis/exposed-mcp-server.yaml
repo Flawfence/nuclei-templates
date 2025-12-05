@@ -3,7 +3,7 @@ id: exposed-mcp-server
 info:
   name: Exposed MCP JSON-RPC 2.0 API Detection
   author: ivan_wallarm
-  severity: unknown
+  severity: low
   description: |
     Detects exposed Machine Control Protocol (MCP) servers through JSON-RPC 2.0 API endpoints.
     MCP servers often provide administrative access to AI tools, LLM systems, or other automation infrastructure.

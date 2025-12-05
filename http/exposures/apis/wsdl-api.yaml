@@ -3,7 +3,7 @@ id: wsdl-api
 info:
   name: WSDL API - Detect
   author: jarijaas
-  severity: info
+  severity: low
   description: WSDL API was detected.
   reference:
     - https://www.w3.org/TR/wsdl/

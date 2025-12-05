@@ -3,7 +3,7 @@ id: openapi
 info:
   name: OpenAPI - Detect
   author: pdteam,ynnirc
-  severity: info
+  severity: low
   description: OpenAPI was detected.
   reference:
     - https://www.openapis.org/

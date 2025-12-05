@@ -3,7 +3,7 @@ id: wadl-api
 info:
   name: WADL API - Detect
   author: 0xrudra,manuelbua
-  severity: info
+  severity: low
   description: WADL API was detected.
   reference:
     - https://github.com/dwisiswant0/wadl-dumper

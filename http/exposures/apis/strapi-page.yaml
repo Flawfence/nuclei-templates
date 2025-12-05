@@ -3,7 +3,7 @@ id: strapi-page
 info:
   name: Strapi API - Detect
   author: dhiyaneshDk
-  severity: info
+  severity: low
   description: Strapi API was detected.
   reference:
     - https://strapi.io/

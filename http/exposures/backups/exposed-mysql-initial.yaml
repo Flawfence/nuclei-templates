@@ -3,7 +3,7 @@ id: exposed-mysql-initial
 info:
   name: mysql.initial Config - Detect
   author: ELSFA7110
-  severity: info
+  severity: low
   description: mysql.initial configuration file was detected.
   reference:
     - https://hackerone.com/reports/1081817
