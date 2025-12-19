@@ -1,0 +1,97 @@
+id: detect-vhost
+
+info:
+  name: Detect Significant Vhosts with DNS Check
+  author: Flawfence
+  severity: low
+  description: |
+    Detects virtual hosts using a wordlist and extracts significant vhosts with different responses compared to the original. Filters out non-working vhosts such as 403 and 401 status codes. Additionally, checks if detected vhosts are linked to an A DNS record.
+  tags: vhost,http,misconfig
+
+flow: |
+  http("calibration");
+  http("vhost_request");
+
+  log("template.discovered_vhost: " + template.discovered_vhost);
+
+  // TODO: Find a way to add DNS checks for each discovered vhost
+  // if (template.discovered_vhost) {
+  //  for (let vhost_name of iterate(template.discovered_vhost)) {
+  //    set("discovered_vhost", vhost_name);
+  //    log("Discovered Vhost: " + vhost_name);
+  //    dns("dns_check");
+  //  }
+  //}
+
+http:
+  - id: calibration
+    method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "true"
+        internal: true
+
+    extractors:
+      - type: regex
+        name: content_length
+        part: header
+        regex:
+          - "Content-Length: (\\d+)"
+        internal: true
+
+  - id: vhost_request
+    method: GET
+    path:
+      - "{{BaseURL}}"
+    headers:
+      Host: "{{vhost}}.{{Host}}"
+
+    payloads:
+      vhost: helpers/wordlists/vhost copy.txt
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 302
+
+      - type: dsl
+        name: final_content_length
+        dsl:
+          - "(to_number(content_length) / to_number(calibration_content_length)) > 1.05 || (to_number(content_length) / to_number(calibration_content_length)) < 0.95"
+
+    extractors:
+      - type: dsl
+        name: discovered_vhost
+        dsl:
+          - "vhost + '.' + Host"
+        internal: true
+
+dns:
+  - id: dns_check
+    name: "{{discovered_vhost}}"
+    type: A
+    
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: no_record
+        dsl:
+          - "len(a) == 0"
+      
+      - type: word
+        name: nxdomain
+        part: raw
+        words:
+          - "NXDOMAIN"
+          - "no such host"
+
+    extractors:
+      - type: dsl
+        dsl:
+          - "discovered_vhost + ' - No DNS A record'"
