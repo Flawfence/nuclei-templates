@@ -1,0 +1,117 @@
+id: detect-vhost
+
+info:
+  name: Detect Significant Vhosts with DNS Check
+  author: Flawfence
+  severity: low
+  description: |
+    Detects virtual hosts using a wordlist and extracts significant vhosts with different responses compared to the original. Filters out non-working vhosts such as 403 and 401 status codes. Additionally, checks if detected vhosts are linked to an A DNS record. If no A record is found, it logs the vhost along with its content length and status code.
+
+    Example of curl commands:
+      curl -s -H "Host: vhost.example.com" http://example.com/
+
+  tags: vhost,http,misconfig
+
+variables:
+  wordlist: helpers/wordlists/vhost.txt
+
+flow: |
+  http("calibration");
+  
+  // Read wordlist file and iterate through each vhost
+  let wordlistContent = template.wordlist;
+  //log("Using wordlist: " + template.wordlist);
+  let wordlist = wordlistContent.replace('[','').replace(']','').split(" ");
+  //log("Total vhosts to check: " + wordlist.length);
+
+  for (let vhost of wordlist) {
+    //log("Checking vhost: " + vhost);
+    if (vhost.trim() === "") continue;
+    
+    set("vhost", vhost.trim());
+    
+    if (http("vhost_request")) {
+      set("discovered_vhost", template.discovered_vhost);
+      
+      // Check DNS for this vhost
+      hasDNS = dns("dns_check");
+    }
+  }
+
+http:
+  - id: calibration
+    method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "true"
+        internal: true
+
+    extractors:
+      - type: regex
+        name: content_length
+        part: header
+        regex:
+          - "Content-Length: (\\d+)"
+        internal: true
+
+  - id: vhost_request
+    method: GET
+    path:
+      - "{{BaseURL}}"
+    headers:
+      Host: "{{vhost}}.{{Host}}"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        name: valid_status
+        status:
+          - 200
+          - 302
+        internal: true
+
+      - type: dsl
+        name: final_content_length
+        dsl:
+          - "(to_number(content_length) / to_number(calibration_content_length)) > 1.05 || (to_number(content_length) / to_number(calibration_content_length)) < 0.95"
+        internal: true
+
+    extractors:
+      - type: dsl
+        name: discovered_vhost
+        dsl:
+          - "vhost + '.' + Host"
+        internal: true
+
+      - type: dsl
+        name: final_content_length
+        dsl:
+          - "final_content_length"
+        internal: true
+
+dns:
+  - id: dns_check
+    name: "{{discovered_vhost}}"
+    type: A
+    
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: no_record
+        dsl:
+          - "len(a) == 0"
+      
+      - type: word
+        part: raw
+        words:
+          - "NXDOMAIN"
+          - "no such host"
+
+    extractors:
+      - type: dsl
+        dsl:
+          - "'The vhost ' + discovered_vhost + ' dont have an A record but is reachable via HTTP'"
