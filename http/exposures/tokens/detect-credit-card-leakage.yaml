@@ -10,6 +10,7 @@ info:
   reference:
     - https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure
     - https://cwe.mitre.org/data/definitions/359.html
+  tags: exposure,token,generic,http
 
 requests:
   - method: GET
