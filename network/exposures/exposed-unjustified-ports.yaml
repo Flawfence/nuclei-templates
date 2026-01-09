@@ -13,7 +13,7 @@ info:
     - https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
 
 variables:
-  ports_file: "/app/results/nmap/nmap-nuclei-targets.txt"
+  ports_file: "/app/results/nuclei/nmap-nuclei-targets.txt"
 
 javascript:
   - code: |
@@ -92,7 +92,7 @@ javascript:
       
     attack: batteringram
     payloads:
-      target: /app/results/nmap/nmap-nuclei-targets.txt
+      target: /app/results/nuclei/nmap-nuclei-targets.txt
 
     matchers:
       - type: dsl
