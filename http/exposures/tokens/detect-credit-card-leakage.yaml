@@ -1,41 +1,173 @@
 id: detect-credit-card-leakage
 
 info:
-  name: Credit Card Data Leakage
+  name: Credit Card and Financial Data Leakage
   author: Flawfence
   severity: critical
   description: |
-    Detects if the application leaks sensitive information such as credit card numbers,
-    expiration dates, or CVVs in a JSON response.
+    Detects if the application leaks sensitive financial information such as credit card numbers,
+    expiration dates, CVV/CVC codes, IBAN numbers, bank account details, or payment-related
+    tokens in HTTP responses. Covers Visa, MasterCard, Amex, Discover, Diners Club, JCB,
+    and UnionPay card formats across JSON, XML, and plain-text formats.
+    This is a PCI-DSS violation and critical data exposure.
   reference:
     - https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure
     - https://cwe.mitre.org/data/definitions/359.html
-  tags: exposure,token,generic,http
+    - https://www.pcisecuritystandards.org/
+  classification:
+    cwe-id: CWE-359
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+  tags: exposure,credit-card,pci-dss,financial,generic,http
 
-requests:
+http:
   - method: GET
     path:
       - "{{BaseURL}}"
 
-    matchers-condition: and
     matchers:
-      - type: word
-        words:
-          - "application/json"
-        part: header
-        condition: and
-
       - type: regex
         regex:
-          - '"credit_card":\s*"[0-9]{13,16}"'
-          - '"credit_card_expires":\s*"[0-9]{2}\/[0-9]{2}"'
-          - '"credit_card_cvv":\s*"[0-9]{3,4}"'
+
+          # ===========================
+          # CREDIT CARD NUMBERS (JSON)
+          # ===========================
+          # Generic card number fields
+          - '"(?:credit_card|card_number|cc_number|numero_carte|carte_bancaire|pan|card_no|cc_num|cardNumber|creditCardNumber|payment_card)":\s*"?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4}"?'
+
+          # Visa (starts with 4, 13 or 16 digits)
+          - '4\d{3}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4}'
+          # MasterCard (starts with 51-55 or 2221-2720)
+          - '5[1-5]\d{2}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}'
+          - '2[2-7]\d{2}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}'
+          # American Express (starts with 34 or 37, 15 digits)
+          - '3[47]\d{2}[\s\-]?\d{6}[\s\-]?\d{5}'
+          # Discover (starts with 6011, 622126-622925, 644-649, 65)
+          - '6(?:011|5\d{2}|4[4-9]\d)[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}'
+          # Diners Club (starts with 300-305, 36, 38)
+          - '3(?:0[0-5]|[68]\d)\d[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{2}'
+          # JCB (starts with 2131, 1800, 35)
+          - '(?:2131|1800|35\d{3})[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{3,4}'
+          # UnionPay (starts with 62)
+          - '62\d{2}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}'
+
+          # ===========================
+          # CVV / CVC / SECURITY CODE
+          # ===========================
+          - '"(?:cvv|cvc|cvv2|cvc2|security_code|card_security|card_verification|code_securite|cid)":\s*"?\d{3,4}"?'
+
+          # ===========================
+          # EXPIRATION DATE
+          # ===========================
+          - '"(?:expiry|expiration|exp_date|card_expiry|date_expiration|expiry_date|expiration_date|exp_month|exp_year|card_exp|cc_exp)":\s*"?\d{2}[\/\-]?\d{2,4}"?'
+
+          # ===========================
+          # CARDHOLDER NAME
+          # ===========================
+          - '"(?:cardholder|cardholder_name|card_holder|card_holder_name|titulaire_carte|nom_titulaire|name_on_card)":\s*"[^"]{3,}"'
+
+          # ===========================
+          # IBAN / BANK ACCOUNT
+          # ===========================
+          - '"(?:iban|bank_account|compte_bancaire|kontonummer|account_number|numero_compte)":\s*"?[A-Z]{2}\d{2}[A-Z0-9]{4,30}"?'
+          # BIC / SWIFT
+          - '"(?:bic|swift|swift_code|code_bic)":\s*"?[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?"?'
+          # Routing number (US)
+          - '"(?:routing_number|routing|aba_number)":\s*"?\d{9}"?'
+          # Sort code (UK)
+          - '"(?:sort_code)":\s*"?\d{2}[\-\s]?\d{2}[\-\s]?\d{2}"?'
+
+          # ===========================
+          # PAYMENT TOKENS / STRIPE / PAYPAL
+          # ===========================
+          - '"(?:stripe_key|stripe_secret|sk_live|sk_test|pk_live|pk_test)":\s*"[^"]{10,}"'
+          - 'sk_live_[a-zA-Z0-9]{24,}'
+          - 'sk_test_[a-zA-Z0-9]{24,}'
+          - 'pk_live_[a-zA-Z0-9]{24,}'
+          - 'pk_test_[a-zA-Z0-9]{24,}'
+          - '"(?:paypal_client_id|paypal_secret|paypal_token|braintree_token|merchant_id)":\s*"[^"]{10,}"'
+
+          # ===========================
+          # XML FORMATS
+          # ===========================
+          - '<(?:creditCard|cardNumber|card_number|creditCardNumber)>[0-9\s\-]{13,19}<\/(?:creditCard|cardNumber|card_number|creditCardNumber)>'
+          - '<(?:cvv|cvc|securityCode)>\d{3,4}<\/(?:cvv|cvc|securityCode)>'
+          - '<(?:iban|bankAccount)>[A-Z]{2}\d{2}[A-Z0-9]{4,30}<\/(?:iban|bankAccount)>'
+          - '<(?:expiry|expirationDate)>\d{2}[\/\-]\d{2,4}<\/(?:expiry|expirationDate)>'
+          - '<(?:cardholderName|cardHolder)>[^<]{3,}<\/(?:cardholderName|cardHolder)>'
+
+          # ===========================
+          # KEY-VALUE / CONFIG FORMATS
+          # ===========================
+          - 'credit_card=\d{13,19}'
+          - 'card_number=\d{13,19}'
+          - 'STRIPE_SECRET_KEY=[^\s\n]+'
+          - 'STRIPE_PUBLISHABLE_KEY=[^\s\n]+'
+
         part: body
         condition: or
 
     extractors:
       - type: regex
+        name: card_numbers
         regex:
-          - '"credit_card":\s*"(.*?)"'
-          - '"credit_card_expires":\s*"(.*?)"'
-          - '"credit_card_cvv":\s*"(.*?)"'
+          - '"(?:credit_card|card_number|cc_number|numero_carte|carte_bancaire|pan|card_no|cc_num|cardNumber|creditCardNumber|payment_card)":\s*"?(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})"?'
+          - '<(?:creditCard|cardNumber|card_number|creditCardNumber)>([0-9\s\-]{13,19})<\/'
+          - 'credit_card=(\d{13,19})'
+          - 'card_number=(\d{13,19})'
+        group: 1
+
+      - type: regex
+        name: card_brand
+        regex:
+          # Visa
+          - '(4\d{3}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})'
+          # MasterCard
+          - '(5[1-5]\d{2}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4})'
+          # Amex
+          - '(3[47]\d{2}[\s\-]?\d{6}[\s\-]?\d{5})'
+          # Discover
+          - '(6(?:011|5\d{2}|4[4-9]\d)[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4})'
+        group: 1
+
+      - type: regex
+        name: cvv
+        regex:
+          - '"(?:cvv|cvc|cvv2|cvc2|security_code|card_security|card_verification|code_securite|cid)":\s*"?(\d{3,4})"?'
+          - '<(?:cvv|cvc|securityCode)>(\d{3,4})<\/'
+        group: 1
+
+      - type: regex
+        name: expiry
+        regex:
+          - '"(?:expiry|expiration|exp_date|card_expiry|date_expiration|expiry_date|expiration_date|cc_exp)":\s*"?(\d{2}[\/\-]?\d{2,4})"?'
+          - '<(?:expiry|expirationDate)>(\d{2}[\/\-]\d{2,4})<\/'
+        group: 1
+
+      - type: regex
+        name: cardholder
+        regex:
+          - '"(?:cardholder|cardholder_name|card_holder|card_holder_name|titulaire_carte|nom_titulaire|name_on_card)":\s*"([^"]{3,})"'
+          - '<(?:cardholderName|cardHolder)>([^<]{3,})<\/'
+        group: 1
+
+      - type: regex
+        name: iban
+        regex:
+          - '"(?:iban|bank_account|compte_bancaire|kontonummer|account_number|numero_compte)":\s*"?([A-Z]{2}\d{2}[A-Z0-9]{4,30})"?'
+          - '<(?:iban|bankAccount)>([A-Z]{2}\d{2}[A-Z0-9]{4,30})<\/'
+        group: 1
+
+      - type: regex
+        name: bic_swift
+        regex:
+          - '"(?:bic|swift|swift_code|code_bic)":\s*"?([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)"?'
+        group: 1
+
+      - type: regex
+        name: stripe_keys
+        regex:
+          - '(sk_live_[a-zA-Z0-9]{24,})'
+          - '(sk_test_[a-zA-Z0-9]{24,})'
+          - '(pk_live_[a-zA-Z0-9]{24,})'
+          - '(pk_test_[a-zA-Z0-9]{24,})'
+        group: 1

@@ -1,0 +1,242 @@
+id: detect-sensible-user-informations
+
+info:
+  name: Sensitive User Information Leakage (PII)
+  author: Flawfence
+  severity: high
+  description: |
+    Detects if the application leaks sensitive Personally Identifiable Information (PII) 
+    such as email addresses, phone numbers, first/last names, postal addresses, 
+    social security numbers, dates of birth, national IDs, 
+    and other private user data in HTTP responses.
+    This constitutes a violation of data privacy regulations (GDPR, CCPA, etc.).
+  reference:
+    - https://owasp.org/www-project-top-ten/2017/A3_2017-Sensitive_Data_Exposure
+    - https://cwe.mitre.org/data/definitions/359.html
+    - https://cwe.mitre.org/data/definitions/200.html
+    - https://gdpr-info.eu/art-5-gdpr/
+  classification:
+    cwe-id: CWE-359
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+  tags: exposure,pii,gdpr,privacy,generic,http
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers:
+      - type: regex
+        regex:
+
+          # ===========================
+          # EMAIL ADDRESSES
+          # ===========================
+          # JSON field containing email
+          - '"e?mail":\s*"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"'
+          - '"email_address":\s*"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"'
+          - '"user_email":\s*"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"'
+          - '"contact_email":\s*"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"'
+          - '"courriel":\s*"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"'
+          # XML email
+          - '<email>[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}<\/email>'
+          - '<mail>[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}<\/mail>'
+
+          # ===========================
+          # PHONE NUMBERS
+          # ===========================
+          # JSON field containing phone (international formats)
+          - '"(phone|telephone|tel|mobile|cell|fax|phone_number|mobile_number|cell_phone|numero_telephone|portable|telephon)":\s*"[\+]?[\d\s\-\.\(\)]{7,20}"'
+          # XML phone
+          - '<(phone|telephone|tel|mobile)>[\+]?[\d\s\-\.\(\)]{7,20}<\/(phone|telephone|tel|mobile)>'
+
+          # ===========================
+          # NAMES (first, last, full)
+          # ===========================
+          - '"(first_?name|prenom|given_?name|nom_de_famille|vorname)":\s*"[^"]{2,}"'
+          - '"(last_?name|family_?name|surname|nom|nachname)":\s*"[^"]{2,}"'
+          - '"(full_?name|display_?name|nom_complet)":\s*"[^"]{2,}"'
+          - '"(middle_?name|maiden_?name|nom_de_jeune_fille)":\s*"[^"]{2,}"'
+          # XML names
+          - '<(firstName|first_name|prenom)>[^<]{2,}<\/(firstName|first_name|prenom)>'
+          - '<(lastName|last_name|nom)>[^<]{2,}<\/(lastName|last_name|nom)>'
+
+          # ===========================
+          # POSTAL ADDRESSES
+          # ===========================
+          - '"(address|adresse|street|rue|street_address|postal_address|home_address|billing_address|shipping_address|delivery_address)":\s*"[^"]{5,}"'
+          - '"(zip_?code|postal_?code|code_postal|postcode|plz)":\s*"?\d{4,10}"?'
+          - '"(city|ville|town|locality|commune|ort|ciudad)":\s*"[^"]{2,}"'
+          - '"(state|province|region|departement|department|bundesland|provincia)":\s*"[^"]{2,}"'
+          - '"(country|pays|land|pais)":\s*"[^"]{2,}"'
+          # XML address
+          - '<(address|adresse|street|rue)>[^<]{5,}<\/(address|adresse|street|rue)>'
+
+          # ===========================
+          # SOCIAL SECURITY NUMBERS
+          # ===========================
+          # US SSN
+          - '"(ssn|social_security|social_security_number)":\s*"?\d{3}[\-\s]?\d{2}[\-\s]?\d{4}"?'
+          # French NIR (numéro de sécurité sociale)
+          - '"(nir|numero_securite_sociale|securite_sociale|numero_ss)":\s*"?[12]\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{3}\s?\d{3}\s?\d{2}"?'
+          # XML SSN
+          - '<(ssn|social_security)>\d{3}[\-\s]?\d{2}[\-\s]?\d{4}<\/(ssn|social_security)>'
+
+          # ===========================
+          # DATE OF BIRTH
+          # ===========================
+          - '"(date_of_birth|dob|birth_?date|birthday|date_naissance|geburtsdatum|fecha_nacimiento)":\s*"[^"]{5,}"'
+
+          # ===========================
+          # NATIONAL ID / PASSPORT
+          # ===========================
+          - '"(national_id|id_number|identity_number|carte_identite|cni|passport|passport_number|numero_passeport|personalausweis)":\s*"[^"]{5,}"'
+          # French CNI (12 digits)
+          - '"(cni|carte_identite)":\s*"?\d{12}"?'
+
+          # ===========================
+          # IP ADDRESSES (user tracking)
+          # ===========================
+          - '"(ip_address|user_ip|client_ip|remote_ip|ip_addr|adresse_ip)":\s*"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"'
+
+          # ===========================
+          # GPS / GEOLOCATION
+          # ===========================
+          - '"(latitude|lat)":\s*"?[\-]?\d{1,3}\.\d{4,}"?'
+          - '"(longitude|lng|lon)":\s*"?[\-]?\d{1,3}\.\d{4,}"?'
+          - '"(geolocation|geo_location|coordinates|location)":\s*\{[^}]*"lat"'
+
+          # ===========================
+          # MEDICAL / HEALTH
+          # ===========================
+          - '"(medical_record|health_id|patient_id|numero_patient|blood_type|groupe_sanguin|diagnosis|diagnostic|medical_condition|health_insurance|mutuelle|assurance_maladie)":\s*"[^"]{2,}"'
+
+          # ===========================
+          # DRIVER LICENSE
+          # ===========================
+          - '"(driver_license|driving_license|permis_conduire|license_number|numero_permis|fuhrerschein)":\s*"[^"]{5,}"'
+
+          # ===========================
+          # TAX / FISCAL ID
+          # ===========================
+          - '"(tax_id|tax_number|fiscal_id|numero_fiscal|tin|vat_number|numero_tva|steuernummer|nif)":\s*"[^"]{5,}"'
+
+          # ===========================
+          # SALARY / FINANCIAL
+          # ===========================
+          - '"(salary|salaire|income|revenu|compensation|remuneration|gehalt|wage)":\s*"?[\d.,]+"?'
+
+          # ===========================
+          # BIOMETRIC DATA
+          # ===========================
+          - '"(fingerprint|empreinte|biometric|face_id|retina|iris_scan)":\s*"[^"]{2,}"'
+
+          # ===========================
+          # ETHNIC / RELIGION / POLITICAL
+          # ===========================
+          - '"(ethnicity|race|religion|political_affiliation|sexual_orientation|origine_ethnique|appartenance_politique)":\s*"[^"]{2,}"'
+
+          # ===========================
+          # USERNAME / USER ID (with associated PII)
+          # ===========================
+          - '"(username|user_name|login|identifiant|benutzername)":\s*"[^"]{2,}"'
+          - '"(user_id|uid|account_id|membre_id|member_id)":\s*"?[^",}{]{2,}"?'
+
+        part: body
+        condition: or
+
+    extractors:
+      - type: regex
+        name: emails
+        regex:
+          - '"(?:e?mail|email_address|user_email|contact_email|courriel)":\s*"([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})"'
+          - '<(?:email|mail)>([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})<\/'
+
+      - type: regex
+        name: phone_numbers
+        regex:
+          - '"(?:phone|telephone|tel|mobile|cell|fax|phone_number|mobile_number|cell_phone|numero_telephone|portable|telephon)":\s*"([\+]?[\d\s\-\.\(\)]{7,20})"'
+          - '<(?:phone|telephone|tel|mobile)>([\+]?[\d\s\-\.\(\)]{7,20})<\/'
+
+      - type: regex
+        name: names
+        regex:
+          - '"(?:first_?name|prenom|given_?name|vorname)":\s*"([^"]{2,})"'
+          - '"(?:last_?name|family_?name|surname|nom|nachname|nom_de_famille)":\s*"([^"]{2,})"'
+          - '"(?:full_?name|display_?name|nom_complet)":\s*"([^"]{2,})"'
+          - '"(?:middle_?name|maiden_?name|nom_de_jeune_fille)":\s*"([^"]{2,})"'
+          - '<(?:firstName|first_name|prenom)>([^<]{2,})<\/'
+          - '<(?:lastName|last_name|nom)>([^<]{2,})<\/'
+
+      - type: regex
+        name: addresses
+        regex:
+          - '"(?:address|adresse|street|rue|street_address|postal_address|home_address|billing_address|shipping_address|delivery_address)":\s*"([^"]{5,})"'
+          - '"(?:zip_?code|postal_?code|code_postal|postcode|plz)":\s*"?(\d{4,10})"?'
+          - '"(?:city|ville|town|locality|commune|ort|ciudad)":\s*"([^"]{2,})"'
+          - '"(?:state|province|region|departement|department|bundesland|provincia)":\s*"([^"]{2,})"'
+          - '"(?:country|pays|land|pais)":\s*"([^"]{2,})"'
+          - '<(?:address|adresse|street|rue)>([^<]{5,})<\/'
+
+      - type: regex
+        name: ssn
+        regex:
+          - '"(?:ssn|social_security|social_security_number)":\s*"?(\d{3}[\-\s]?\d{2}[\-\s]?\d{4})"?'
+          - '"(?:nir|numero_securite_sociale|securite_sociale|numero_ss)":\s*"?([12]\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{3}\s?\d{3}\s?\d{2})"?'
+          - '<(?:ssn|social_security)>(\d{3}[\-\s]?\d{2}[\-\s]?\d{4})<\/'
+
+      - type: regex
+        name: date_of_birth
+        regex:
+          - '"(?:date_of_birth|dob|birth_?date|birthday|date_naissance|geburtsdatum|fecha_nacimiento)":\s*"([^"]{5,})"'
+
+      - type: regex
+        name: national_ids
+        regex:
+          - '"(?:national_id|id_number|identity_number|carte_identite|cni|passport|passport_number|numero_passeport|personalausweis)":\s*"([^"]{5,})"'
+
+      - type: regex
+        name: ip_addresses
+        regex:
+          - '"(?:ip_address|user_ip|client_ip|remote_ip|ip_addr|adresse_ip)":\s*"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"'
+
+      - type: regex
+        name: geolocation
+        regex:
+          - '"(?:latitude|lat)":\s*"?([\-]?\d{1,3}\.\d{4,})"?'
+          - '"(?:longitude|lng|lon)":\s*"?([\-]?\d{1,3}\.\d{4,})"?'
+
+      - type: regex
+        name: medical_data
+        regex:
+          - '"(?:medical_record|health_id|patient_id|numero_patient|blood_type|groupe_sanguin|diagnosis|diagnostic|medical_condition|health_insurance|mutuelle|assurance_maladie)":\s*"([^"]{2,})"'
+
+      - type: regex
+        name: driver_license
+        regex:
+          - '"(?:driver_license|driving_license|permis_conduire|license_number|numero_permis|fuhrerschein)":\s*"([^"]{5,})"'
+
+      - type: regex
+        name: tax_fiscal
+        regex:
+          - '"(?:tax_id|tax_number|fiscal_id|numero_fiscal|tin|vat_number|numero_tva|steuernummer|nif)":\s*"([^"]{5,})"'
+
+      - type: regex
+        name: salary
+        regex:
+          - '"(?:salary|salaire|income|revenu|compensation|remuneration|gehalt|wage)":\s*"?([\d.,]+)"?'
+
+      - type: regex
+        name: biometric
+        regex:
+          - '"(?:fingerprint|empreinte|biometric|face_id|retina|iris_scan)":\s*"([^"]{2,})"'
+
+      - type: regex
+        name: sensitive_category
+        regex:
+          - '"(?:ethnicity|race|religion|political_affiliation|sexual_orientation|origine_ethnique|appartenance_politique)":\s*"([^"]{2,})"'
+
+      - type: regex
+        name: usernames
+        regex:
+          - '"(?:username|user_name|login|identifiant|benutzername)":\s*"([^"]{2,})"'
