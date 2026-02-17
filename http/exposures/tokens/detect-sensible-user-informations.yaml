@@ -69,8 +69,9 @@ http:
           - '"(city|ville|town|locality|commune|ort|ciudad)":\s*"[^"]{2,}"'
           - '"(state|province|region|departement|department|bundesland|provincia)":\s*"[^"]{2,}"'
           - '"(country|pays|land|pais)":\s*"[^"]{2,}"'
-          # XML address
-          - '<(address|adresse|street|rue)>[^<]{5,}<\/(address|adresse|street|rue)>'
+          # XML address (exclude Apache/Nginx server signatures)
+          - '<(?:adresse|street|rue)>[^<]{5,}<\/(?:adresse|street|rue)>'
+          - '<address>[^<]*(?:rue|street|avenue|boulevard|road|chemin|place|allée|impasse|passage)\s[^<]{3,}<\/address>'
 
           # ===========================
           # SOCIAL SECURITY NUMBERS
@@ -176,7 +177,8 @@ http:
           - '"(?:city|ville|town|locality|commune|ort|ciudad)":\s*"([^"]{2,})"'
           - '"(?:state|province|region|departement|department|bundesland|provincia)":\s*"([^"]{2,})"'
           - '"(?:country|pays|land|pais)":\s*"([^"]{2,})"'
-          - '<(?:address|adresse|street|rue)>([^<]{5,})<\/'
+          - '<(?:adresse|street|rue)>([^<]{5,})<\/'
+          - '<address>([^<]*(?:rue|street|avenue|boulevard|road|chemin|place|allée|impasse|passage)\s[^<]{3,})<\/address>'
 
       - type: regex
         name: ssn
