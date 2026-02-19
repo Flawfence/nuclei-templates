@@ -3,7 +3,7 @@ id: external-service-interaction
 info:
   name: External Service Interaction
   author: andreluna
-  severity: info
+  severity: low
   description: External Service interaction via Host Header Injection.
   reference:
     - https://portswigger.net/kb/issues/00300210_external-service-interaction-http
