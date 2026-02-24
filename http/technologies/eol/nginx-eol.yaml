@@ -3,7 +3,7 @@ id: nginx-eol
 info:
   name: Nginx End-of-Life - Detect
   author: Shivam Kamboj
-  severity: info
+  severity: low
   description: |
     Detected Nginx versions that have reached End-of-Life (EOL) and no longer receive security updates.
   reference:
