@@ -3,9 +3,9 @@ id: rdweb-panel
 info:
   name: RD Web Access Panel - Detect
   author: rxerium,sorrowx3
-  severity: info
+  severity: low
   description: |
-    RD web access panel was discovered.
+    RD web access panel was discovered. RD Web Access is a feature of Remote Desktop Services that allows users to access RemoteApp and Desktop Connection through a web browser. It provides a web-based interface for users to access their remote applications and desktops, making it easier for them to work remotely. The presence of RD Web Access may indicate that the target system is using Remote Desktop Services, which could be a potential attack vector if not properly secured.
   reference:
     - https://rdweb.wvd.microsoft.com/webclient
   classification:
