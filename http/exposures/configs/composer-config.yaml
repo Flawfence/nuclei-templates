@@ -3,7 +3,7 @@ id: composer-config
 info:
   name: Composer Config - Detect
   author: Mahendra Purbia (Mah3Sec_),TheZakMan
-  severity: info
+  severity: low
   description: Composer configuration file detected.
   reference:
     - https://getcomposer.org/
