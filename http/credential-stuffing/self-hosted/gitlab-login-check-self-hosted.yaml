@@ -16,11 +16,35 @@ variables:
   username: "{{username}}"
   password: "{{password}}"
 
+flow: http(1) && http(2)
+
 http:
   - raw:
       - |
         GET /users/sign_in HTTP/1.1
         Host: {{Hostname}}
+
+    cookie-reuse: true
+    host-redirects: true
+    max-redirects: 3
+
+    extractors:
+      - type: regex
+        part: body
+        name: authenticity_token
+        group: 1
+        regex:
+          - 'name="authenticity_token"[^>]*value="([^"]+)"'
+        internal: true
+
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "authenticity_token"
+        internal: true
+
+  - raw:
       - |
         POST /users/sign_in HTTP/1.1
         Host: {{Hostname}}
@@ -33,25 +57,17 @@ http:
 
         authenticity_token={{url_encode(authenticity_token)}}&user%5Blogin%5D={{username}}&user%5Bpassword%5D={{password}}&user%5Bremember_me%5D=0
 
-    attack: pitchfork
+    cookie-reuse: true
 
     extractors:
-      - type: regex
-        part: body
-        internal: true
-        name: authenticity_token
-        group: 1
-        regex:
-          - '"/users/sign_in".*?authenticity_token"\s+value="([^"]+)"'
-
       - type: dsl
         dsl:
           - username
           - password
+
     matchers:
       - type: dsl
         dsl:
-          - status_code_2 == 302
-          - '!contains(to_lower(body_2), "invalid login")'
+          - status_code == 302
+          - '!contains(to_lower(body), "invalid login")'
         condition: and
-# digest: 490a004630440220017ed9316f88a6e507682d3e753f559c54aca3fa68638fc07fb442b6b6ceb8cd02205b657bc5cca482a2870002c8439761c7bd001b0424f93c653312264f8e4860ef:922c64590222798bb761d5b6d8e72950
