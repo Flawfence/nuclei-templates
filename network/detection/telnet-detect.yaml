@@ -20,74 +20,71 @@ info:
 javascript:
   - code: |
       var net = require("nuclei/net");
+      var target = Host;
 
-      // Parse host:port from input file
-      var parts = Hostname.split(":");
+      var parts = target.split(":");
+      if (parts.length < 2) return;
+
       var host = parts[0];
-      var port = parts.length > 1 ? parts[1] : "23";
+      var port = parseInt(parts[parts.length - 1], 10);
+      if (isNaN(port)) return;
 
-      log("Connecting to " + host + ":" + port);
-
-      var result = "";
-      var conn;
-      try {
-        conn = net.Open("tcp", host + ":" + port);
-      } catch (e) {
-        log("Error: " + e);
-        Export(result);
+      // --- Stagger connections ---
+      // Telnet devices (routers, switches) only allow a few concurrent VTY
+      // sessions.  When nuclei probes multiple ports in parallel they all
+      // race and only one wins; the rest get "connection refused".
+      // We add a deterministic delay based on the port number so each
+      // probe reaches the device at a different time.
+      var delay = ((port * 31) % 11) * 1000;   // 0-10 s spread
+      if (delay > 0) {
+        var until = new Date().getTime() + delay;
+        while (new Date().getTime() < until) {}
       }
 
-      if (conn) {
-        try { conn.SetTimeout(8); } catch (e) {}
+      var conn = net.Open("tcp", host + ":" + port);
+      if (!conn) return;
 
-        // Read banner - single read with enough buffer
-        var banner = "";
-        try { banner = conn.RecvString(2048); } catch (e) {
-          log("RecvString error (will retry): " + e);
-        }
-        // Retry once if empty (server may be slow)
-        if (!banner) {
-          try { banner = conn.RecvString(2048); } catch (e) {}
-        }
+      // Two-pass read: first grab IAC bytes (sent immediately), then the
+      // login banner which may arrive in a later TCP segment.
+      var banner = "";
+      try { banner = conn.RecvString(64); } catch (e) {}
+      try { banner += conn.RecvString(256); } catch (e) {}
+      try { conn.Close(); } catch (e) {}
 
-        // Always close, ignore errors
-        try { conn.Close(); } catch (e) {}
+      if (!banner || banner.length === 0) return;
 
-        if (banner && banner.length > 0) {
-          // Detect Telnet IAC bytes (0xFF → U+FFFD in goja JS engine)
-          var hasIAC = false;
-          for (var i = 0; i < Math.min(banner.length, 64); i++) {
-            if (banner.charCodeAt(i) === 0xFFFD) { hasIAC = true; break; }
-          }
-
-          var bannerText = banner.replace(/[\x00-\x1f\uFFFD]/g, " ").substring(0, 200).trim();
-          var bl = bannerText.toLowerCase();
-          var hasKeyword = bl.includes("login:") || bl.includes("username:")
-            || bl.includes("telnet") || bl.includes("user access verification")
-            || bl.includes("password:");
-
-          var isTelnet = hasIAC || hasKeyword;
-          log("Port=" + port + " IAC=" + hasIAC + " Keyword=" + hasKeyword + " Telnet=" + isTelnet + " Banner=" + bannerText.substring(0, 60));
-
-          if (isTelnet) {
-            result = "TELNET host=" + host + " port=" + port + " banner=" + bannerText;
-          }
-        } else {
-          log("No banner received on port " + port);
-        }
+      // Detect Telnet IAC bytes (0xFF → U+FFFD in goja engine)
+      var hasIAC = false;
+      for (var i = 0; i < Math.min(banner.length, 64); i++) {
+        if (banner.charCodeAt(i) === 0xFFFD) { hasIAC = true; break; }
       }
+
+      var clean = banner.replace(/[\x00-\x1f\uFFFD]/g, " ").substring(0, 200).trim();
+      var low = clean.toLowerCase();
+      var hasKW = low.includes("login:") || low.includes("username:")
+        || low.includes("telnet") || low.includes("user access verification")
+        || low.includes("password:");
+
+      if (!hasIAC && !hasKW) return;
+
+      var result = {
+        "host": host,
+        "port": port,
+        "iac": hasIAC,
+        "banner": clean
+      };
       Export(result);
-      result;
+      to_json(result);
 
     args:
-      Hostname: "{{Hostname}}"
+      Host: "{{Hostname}}"
 
     matchers:
-      - type: word
-        words:
-          - "TELNET host="
+      - type: dsl
+        dsl:
+          - 'len(response) > 0'
 
     extractors:
-      - type: regex
-        regex:
-          - 'TELNET host=([^\s]+) port=([^\s]+) banner=(.*)'
+      - type: dsl
+        dsl:
+          - 'response'
