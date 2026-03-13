@@ -1,28 +1,107 @@
 id: telnet-detect
 
 info:
-  name: Telnet Detection
-  author: pussycat0x
-  severity: info
+  name: Telnet Service - Detect
+  author: pussycat0x,Flawfence
+  severity: high
   description: |
-    Telnet is a network protocol used to virtually access a computer and to provide a two-way, collaborative and text-based communication channel between two machines.
+    Telnet is a network protocol used to virtually access a computer and to provide a two-way, collaborative and text-based communication channel between two machines. Telnet transmits all data, including credentials, in cleartext making it a security risk.
+  reference:
+    - https://www.rfc-editor.org/rfc/rfc854
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cwe-id: CWE-200
   metadata:
     verified: true
     max-request: 1
-    shodan-query: port:23 telnet
+    shodan-query: port:23,2323,2001,2002,4001,4002,9999,10001 telnet
   tags: network,telnet,detect,detection,tcp,discovery
-tcp:
-  - inputs:
-      - data: "\n"
 
-    host:
-      - "{{Hostname}}"
-    port: 23
+javascript:
+  - code: |
+      var net = require("nuclei/net");
 
+      // Honor the port specified in the target (host:port).
+      // If no port is given, probe common Telnet ports in order.
+      var hostParts = Hostname.split(":");
+      var Host = hostParts[0];
+      var targetPorts = hostParts.length > 1
+        ? [parseInt(hostParts[1], 10)]
+        : [23, 2323, 2001, 2002, 4001, 4002, 9999, 10001];
+
+      var result = "";
+      for (var i = 0; i < targetPorts.length; i++) {
+        var port = targetPorts[i];
+        try {
+          var conn = net.Open("tcp", Host + ":" + port);
+          if (!conn) { continue; }
+
+          // Extend the read deadline so Recv() waits long enough when the
+          // server's response is delayed (e.g. parallel connections to the
+          // same device).  Silently ignored if the method is unavailable.
+          try { conn.SetTimeout(5); } catch (e) {}
+
+          // First read: IAC negotiation bytes (server sends immediately on connect).
+          // If the response hasn't buffered yet, retry once before giving up.
+          var banner = conn.Recv();
+          if (!banner) { try { banner = conn.Recv(); } catch (e) {} }
+          if (!banner) { conn.Close(); continue; }
+
+          // Second read: login banner text (may arrive in a separate TCP segment)
+          try { banner += conn.Recv(); } catch (e) {}
+          conn.Close();
+
+          // Detect Telnet IAC bytes.
+          // In goja (nuclei's JS engine), Go strings with invalid UTF-8 bytes
+          // (like 0xFF = IAC) are decoded as U+FFFD (replacement char, charCode 65533).
+          // Binary matchers cannot be used here because the bytes are re-encoded
+          // as 0xEF 0xBF 0xBD (UTF-8 for U+FFFD) when returned to Go.
+          var hasIAC = false;
+          for (var j = 0; j < Math.min(banner.length, 64); j++) {
+            if (banner.charCodeAt(j) === 0xFFFD) { hasIAC = true; break; }
+          }
+
+          result = "TELNET_PORT=" + port
+            + (hasIAC ? " TELNET_IAC=true" : "")
+            + "\n" + banner;
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
+      result;
+
+    args:
+      Host: "{{Host}}"
+      Hostname: "{{Hostname}}"
+
+    matchers-condition: or
     matchers:
+      # Primary: IAC bytes detected (most Telnet servers send these immediately)
       - type: word
         words:
-          - "Telnet"
+          - "TELNET_IAC=true"
+
+      # Fallback: plain-text banner keywords (no IAC negotiation)
+      - type: word
+        case-insensitive: true
+        words:
+          - "User Access Verification"
           - "Login authentication"
-        condition: and
-# digest: 4a0a00473045022100c41b2f955a3981de948ba9c70022a83691dfa3ffc0ff24b2d2b008d8ecc870d802201207a0afad83447ca69282cbdf64be6f2580261047d38b1ae7d3b82ae7965a67:922c64590222798bb761d5b6d8e72950
+          - "login:"
+          - "Username:"
+          - "Telnet"
+        condition: or
+
+    extractors:
+      - type: regex
+        name: telnet-port
+        regex:
+          - 'TELNET_PORT=([0-9]+)'
+        group: 1
+
+      - type: regex
+        name: telnet-banner
+        regex:
+          - '(?i)(User Access Verification|Login authentication|Welcome to [^\r\n]+|[A-Za-z0-9._-]+ [Tt]elnet [Ss]erver)'
+        group: 1
