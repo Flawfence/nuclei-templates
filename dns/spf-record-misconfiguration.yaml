@@ -1,0 +1,66 @@
+id: spf-record-misconfiguration
+
+info:
+  name: SPF Record - Misconfiguration
+  author: Flawfence
+  severity: low
+  description: |
+    Detects common SPF (Sender Policy Framework) misconfigurations that could allow email spoofing.
+    Issues detected include:
+    - Use of +all mechanism which allows any server to send email on behalf of the domain.
+    - Use of ~all (softfail) which suggests but does not enforce rejection of unauthorized senders.
+    - Use of ?all (neutral) which provides no protection against spoofing.
+    - Use of the deprecated ptr mechanism (RFC 7208 Section 5.5) which is unreliable and slow.
+  remediation: |
+    Configure your SPF record with a strict -all (hardfail) mechanism to reject unauthorized senders.
+    Remove any ptr mechanisms and replace them with explicit ip4/ip6 entries.
+    Ensure only necessary include directives are present.
+    Example: v=spf1 include:_spf.google.com ip4:203.0.113.0/24 -all
+  reference:
+    - https://www.rfc-editor.org/rfc/rfc7208
+    - https://www.rfc-editor.org/rfc/rfc7208#section-5.5
+    - https://dmarcian.com/spf-syntax-table/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N
+    cvss-score: 3.7
+    cwe-id: CWE-183
+  metadata:
+    max-request: 1
+  tags: dns,spf,email,misconfiguration
+
+dns:
+  - name: "{{FQDN}}"
+    type: TXT
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        name: spf-pass-all
+        words:
+          - "v=spf1"
+          - "+all"
+        condition: and
+
+      - type: word
+        name: spf-softfail
+        words:
+          - "v=spf1"
+          - "~all"
+        condition: and
+
+      - type: word
+        name: spf-neutral
+        words:
+          - "v=spf1"
+          - "?all"
+        condition: and
+
+      - type: regex
+        name: spf-ptr-deprecated
+        regex:
+          - "v=spf1.* ptr[ :\"]"
+
+    extractors:
+      - type: regex
+        regex:
+          - "v=spf1[^\"]*"

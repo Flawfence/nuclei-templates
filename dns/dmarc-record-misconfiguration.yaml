@@ -1,0 +1,81 @@
+id: dmarc-record-misconfiguration
+
+info:
+  name: DMARC Record - Misconfiguration
+  author: Flawfence
+  severity: low
+  description: |
+    Detects common DMARC (Domain-based Message Authentication, Reporting and Conformance) misconfigurations
+    that weaken email authentication enforcement.
+    Issues detected include:
+    - Policy set to none (p=none) which only monitors without enforcing any action on failing emails.
+    - Subdomain policy set to none (sp=none) leaving subdomains unprotected against spoofing.
+    - Percentage tag below 100% (pct<100) meaning the DMARC policy is only applied to a fraction of emails.
+    - Missing aggregate reporting URI (rua=) preventing visibility into authentication results.
+  remediation: |
+    Set the DMARC policy to quarantine or reject (p=quarantine or p=reject) to enforce email authentication.
+    Ensure subdomain policy (sp=) matches or exceeds the main domain policy.
+    Set pct=100 or remove the pct tag (defaults to 100) to apply the policy to all emails.
+    Configure aggregate reporting with rua= to receive authentication reports.
+    Example: v=DMARC1; p=reject; sp=reject; rua=mailto:dmarc-reports@example.com; ruf=mailto:dmarc-forensics@example.com;
+  reference:
+    - https://www.rfc-editor.org/rfc/rfc7489
+    - https://dmarc.org/wiki/FAQ
+    - https://dmarc.org/overview/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N
+    cvss-score: 3.7
+    cwe-id: CWE-183
+  metadata:
+    max-request: 2
+  tags: dns,dmarc,email,misconfiguration
+
+dns:
+  - name: "_dmarc.{{FQDN}}"
+    type: TXT
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        name: dmarc-policy-none
+        words:
+          - "v=DMARC1"
+          - "p=none"
+        condition: and
+
+      - type: word
+        name: dmarc-subdomain-policy-none
+        words:
+          - "v=DMARC1"
+          - "sp=none"
+        condition: and
+
+      - type: regex
+        name: dmarc-partial-enforcement
+        regex:
+          - "v=DMARC1[^\"]*pct=[0-9]{1,2}[^0-9]"
+
+    extractors:
+      - type: regex
+        regex:
+          - "v=DMARC1[^\"]*"
+
+  - name: "_dmarc.{{FQDN}}"
+    type: TXT
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        name: dmarc-no-aggregate-reporting
+        words:
+          - "v=DMARC1"
+
+      - type: word
+        words:
+          - "rua="
+        negative: true
+
+    extractors:
+      - type: regex
+        regex:
+          - "v=DMARC1[^\"]*"

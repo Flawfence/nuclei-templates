@@ -1,0 +1,69 @@
+id: dkim-record-misconfiguration
+
+info:
+  name: DKIM Record - Misconfiguration
+  author: Flawfence
+  severity: low
+  description: |
+    Detects common DKIM (DomainKeys Identified Mail) misconfigurations that weaken email authentication.
+    Issues detected include:
+    - Testing mode flag (t=y) which instructs receivers to treat signed messages as if unsigned,
+      effectively disabling DKIM verification.
+    - Revoked or empty public key (p= tag empty) indicating the key has been revoked but the
+      DNS record was not cleaned up, which can cause verification failures.
+    - Use of weak SHA-1 hash algorithm (h=sha1) instead of the recommended SHA-256.
+  remediation: |
+    Remove the t=y testing flag once DKIM signing is validated in production.
+    Remove DNS records for revoked keys to avoid confusion and verification errors.
+    Use SHA-256 (h=sha256) as the hash algorithm for DKIM signatures.
+    Ensure DKIM keys are at least 2048-bit RSA or use Ed25519.
+  reference:
+    - https://www.rfc-editor.org/rfc/rfc6376
+    - https://www.rfc-editor.org/rfc/rfc8463
+    - https://dkim.org/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N
+    cvss-score: 3.7
+    cwe-id: CWE-310
+  metadata:
+    max-request: 10
+  tags: dns,dkim,email,misconfiguration
+
+dns:
+  - name: "{{selector}}._domainkey.{{FQDN}}"
+    type: TXT
+
+    payloads:
+      selector:
+        - default
+        - selector1
+        - selector2
+        - google
+        - k1
+        - s1
+        - s2
+        - dkim
+        - mail
+        - email
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        name: dkim-testing-mode
+        regex:
+          - "v=DKIM1[^\"]*t=y"
+
+      - type: regex
+        name: dkim-revoked-key
+        regex:
+          - "v=DKIM1[^\"]*p=\\s*[;\"]"
+
+      - type: regex
+        name: dkim-weak-hash
+        regex:
+          - "v=DKIM1[^\"]*h=sha1"
+
+    extractors:
+      - type: regex
+        regex:
+          - "v=DKIM1[^\"]*"
