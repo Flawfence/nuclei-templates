@@ -5,81 +5,88 @@ info:
   author: Flawfence
   severity: medium
   description: |
-    Detects services running on non-standard/unjustified ports by reading a list of IP:PORT combinations,
-    attempting to connect to each port, and identifying services running on unexpected ports.
-    This helps identify potential security misconfigurations or backdoors.
+    Detects services exposed on a web server beyond the expected web ports (80/443).
+    If the target host has 80 or 443 open, it is considered a web server, and any other
+    open port reachable on that host is reported as an unjustified exposure that should
+    not be publicly accessible (SSH, mail, databases, admin panels, etc.).
+    Hosts that are not web servers are out of scope and skipped.
   tags: network,exposure,ports,misconfiguration
-  reference:
-    - https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
 
 javascript:
   - code: |
       var net = require("nuclei/net");
-      var target = Host;  // This will be the full input like "31.220.95.27:1234"
+      var target = Host;  // This will be the full input like "1.2.3.4:1234"
 
-      //log("Processing target: " + target);
-      
-      // Parse the target (format: host:port)
       var parts = target.split(":");
       if (parts.length < 2) {
-        //log("Invalid format: " + target);
         return;
       }
-      
+
       var host = parts[0];
       var port = parseInt(parts[parts.length - 1], 10);
-      
-      //log("Parsed - Host: " + host + ", Port: " + port);
-      
-      // Skip standard HTTP ports
-      if (isNaN(port) || port === 80 || port === 443 || port === 8080 || port === 8443 || port === 8000) {
-        //log("Skipping standard port: " + port);
+
+      if (isNaN(port)) {
         return;
       }
-      
-      //log("Connecting to " + host + ":" + port);
-      
+
+      // Web ports themselves are the justification criterion — never report them.
+      if (port === 80 || port === 443) {
+        return;
+      }
+
+      // Only flag this port if the host is actually a web server (80 or 443 reachable).
+      // Otherwise the host is out of scope for this check.
+      var isWebServer = false;
+      var probe80 = net.Open("tcp", host + ":80");
+      if (probe80) {
+        isWebServer = true;
+        probe80.Close();
+      } else {
+        var probe443 = net.Open("tcp", host + ":443");
+        if (probe443) {
+          isWebServer = true;
+          probe443.Close();
+        }
+      }
+
+      if (!isWebServer) {
+        return;
+      }
+
+      // Host is a web server but exposes an extra port — try to identify the service.
       var conn = net.Open("tcp", host + ":" + port);
       if (!conn) {
-        //log("Failed to connect");
         return;
       }
-      
-      //log("Connected! Reading banner...");
-      
+
       var banner = conn.RecvString(1024);
       conn.Close();
-      
-      if (!banner) {
-        //log("No banner received");
-        return;
-      }
-      
-      //log("Banner received: " + banner.substring(0, 50));
-      
+
       var service = "unknown";
-      var b = banner.toLowerCase();
-      
-      if (b.includes("ssh")) service = "SSH";
-      else if (b.includes("ftp")) service = "FTP";
-      else if (b.includes("smtp")) service = "SMTP";
-      else if (b.includes("mysql")) service = "MySQL";
-      else if (b.includes("postgresql")) service = "PostgreSQL";
-      else if (b.includes("mongodb")) service = "MongoDB";
-      else if (b.includes("redis")) service = "Redis";
-      else if (b.includes("http")) service = "HTTP";
-      
-      //log("Identified service: " + service);
-      
+      var bannerSample = "";
+      if (banner) {
+        bannerSample = banner.substring(0, 100).replace(/[\r\n]+/g, " ");
+        var b = banner.toLowerCase();
+        if (b.includes("ssh")) service = "SSH";
+        else if (b.includes("imap")) service = "IMAP";
+        else if (b.includes("pop3")) service = "POP3";
+        else if (b.includes("esmtp") || b.includes("smtp")) service = "SMTP";
+        else if (b.includes("ftp")) service = "FTP";
+        else if (b.includes("mysql") || b.includes("mariadb")) service = "MySQL";
+        else if (b.includes("postgresql") || b.includes("postgres")) service = "PostgreSQL";
+        else if (b.includes("mongodb")) service = "MongoDB";
+        else if (b.includes("redis")) service = "Redis";
+        else if (b.includes("http")) service = "HTTP";
+      }
+
       var result = {
-        "host": host, 
-        "port": port, 
-        "service": service, 
-        "banner": banner.substring(0, 100).replace(/[\r\n]+/g, " ")
+        "host": host,
+        "port": port,
+        "service": service,
+        "banner": bannerSample
       };
       Export(result);
-      
-      //log(result);
+
       to_json(result);
 
     args:
