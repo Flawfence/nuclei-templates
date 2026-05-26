@@ -97,19 +97,17 @@ http:
         name: ls-output
         part: body
         regex:
-          - 'total \d+'
-          - 'drwx.*\s+\d+\s+'
-          - '-rw.*\s+\d+\s+'
+          - 'total \d+\s*[\r\n]+[d\-l][rwx\-stST]{9}'
+          - '[d\-l][rwx\-stST]{9}\s+\d+\s+\S+\s+\S+\s+\d+\s+\S+\s+\d+\s+[\d:]+\s+\S+'
 
-      - type: word
+      - type: regex
         name: windows-commands
         part: body
-        words:
-          - "Volume in drive"
-          - "Directory of"
-          - "Windows IP Configuration"
-          - "Microsoft Windows"
-        condition: or
+        regex:
+          - 'Volume in drive [A-Z] (is|has no label)'
+          - 'Directory of [A-Z]:\\'
+          - 'Windows IP Configuration\s*[\r\n]+\s*(Host Name|Ethernet adapter|Primary Dns Suffix)'
+          - 'Microsoft Windows \[Version \d+\.\d+\.\d+'
 
     extractors:
       # Extract marker injection evidence
