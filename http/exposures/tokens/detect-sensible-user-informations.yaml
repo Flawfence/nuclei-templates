@@ -30,6 +30,30 @@ http:
     matchers-condition: and
     matchers:
       # =====================================================================
+      # MATCHER 0: CONTENT-TYPE GUARD — only inspect data responses
+      # (JSON/XML). Translation/i18n files served as application/javascript
+      # contain JSON-like keys ("first_name", "email", ...) whose values are
+      # UI labels, not user PII — they trigger massive false positives.
+      # =====================================================================
+      - type: regex
+        name: data_content_type
+        part: header
+        regex:
+          - '(?i)Content-Type:\s*(application/(json|xml|[A-Za-z0-9.+-]*\+json|[A-Za-z0-9.+-]*\+xml)|text/(xml|json))'
+
+      # =====================================================================
+      # MATCHER 0bis: EXCLUDE i18n / translation dictionaries even when
+      # served as application/json (some locale files are).
+      # =====================================================================
+      - type: regex
+        name: not_translation_dictionary
+        negative: true
+        part: body
+        regex:
+          - '(?i)\bvar\s+\w*(lang|i18n|locale|translation|messages)\w*\s*='
+          - '(?i)"(lang|locale|language|translation)"\s*:\s*"[a-z]{2}(_[A-Z]{2})?"\s*,'
+
+      # =====================================================================
       # MATCHER 1: IDENTITY ANCHOR — at least one direct person identifier
       # (email, phone, full name, SSN, DOB, national ID, medical, biometric)
       # =====================================================================
