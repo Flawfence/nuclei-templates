@@ -3,7 +3,10 @@ id: build-properties
 info:
   name: Build Properties File Exposure
   author: DhiyaneshDk
-  severity: info
+  severity: low
+  description: |
+    This template checks for the presence of build.properties file which may contain sensitive information about the build process and configuration. The presence of this file can indicate a potential exposure of build-related information that could be leveraged by attackers to gain insights into the application's build environment, dependencies, and configurations. It is important to ensure that such files are not publicly accessible to prevent unauthorized access to sensitive information that could be used for reconnaissance or exploitation purposes.
+  classification:
   metadata:
     verified: true
     max-request: 3
