@@ -43,35 +43,87 @@ javascript:
 
       var conn = net.Open("tcp", host + ":" + port);
       if (!conn) return;
+      try { conn.SetTimeout(5); } catch (e) {}
 
-      // Two-pass read: first grab IAC bytes (sent immediately), then the
-      // login banner which may arrive in a later TCP segment.
-      var banner = "";
-      try { banner = conn.RecvString(64); } catch (e) {}
-      try { banner += conn.RecvString(256); } catch (e) {}
-      try { conn.Close(); } catch (e) {}
-
-      if (!banner || banner.length === 0) return;
-
-      // Detect Telnet IAC bytes (0xFF → U+FFFD in goja engine)
-      var hasIAC = false;
-      for (var i = 0; i < Math.min(banner.length, 64); i++) {
-        if (banner.charCodeAt(i) === 0xFFFD) { hasIAC = true; break; }
+      // Read RAW bytes, never RecvString(): the goja engine UTF-8-decodes the
+      // string and turns EVERY non-ASCII byte into U+FFFD -- not just the
+      // Telnet IAC 0xFF. That made any binary protocol (MySQL handshake,
+      // Dovecot, ...) look like it carried IAC bytes => false positives.
+      // Recv() returns the bytes untouched (values 0-255).
+      function recvBytes(c, n) {
+        var out = [];
+        try {
+          var b = c.Recv(n);
+          if (b && b.length) {
+            for (var i = 0; i < b.length; i++) out.push(b[i] & 0xff);
+          }
+        } catch (e) {}
+        return out;
       }
 
-      var clean = banner.replace(/[\x00-\x1f\uFFFD]/g, " ").substring(0, 200).trim();
-      var low = clean.toLowerCase();
-      var hasKW = low.includes("login:") || low.includes("username:")
-        || low.includes("telnet") || low.includes("user access verification")
-        || low.includes("password:");
+      // Telnet is uniquely defined by IAC (255) option negotiation. A valid
+      // command is IAC followed by WILL/WONT/DO/DONT (251-254) + a real telnet
+      // option byte (0-49 cover every standard option, up to KERMIT/47), or
+      // IAC + a command in the 240-250 range (SB/SE/NOP/DM/...).
+      // IAC IAC (255 255) is an escaped *data* byte, not a command -> ignored.
+      // Requiring this exact structure (not a lone 0xFF) rejects binary
+      // protocols that merely happen to contain 0xFF bytes.
+      function telnetNegotiations(bytes) {
+        var hits = 0;
+        for (var i = 0; i + 1 < bytes.length; i++) {
+          if (bytes[i] !== 255) continue;
+          var cmd = bytes[i + 1];
+          if (cmd >= 251 && cmd <= 254) {          // WILL WONT DO DONT
+            var opt = (i + 2 < bytes.length) ? bytes[i + 2] : -1;
+            if (opt >= 0 && opt <= 49) { hits++; i += 2; }   // real option
+          } else if (cmd >= 240 && cmd <= 250) {   // SB SE NOP DM BRK IP ...
+            hits++; i += 1;
+          }
+          // cmd === 255 -> escaped IAC data byte, not a command, skip
+        }
+        return hits;
+      }
 
-      if (!hasIAC && !hasKW) return;
+      var raw = recvBytes(conn, 512);
+
+      // A genuine Telnet server opens with a *block* of negotiations (several
+      // IAC commands back to back). Requiring >= 2 well-formed negotiations
+      // rejects binary protocols (e.g. a MySQL handshake) that may contain one
+      // coincidental IAC-like byte pair.
+      var confirmed = telnetNegotiations(raw) >= 2;
+
+      // Otherwise, actively probe: IAC DO STATUS (FF FD 05). Per RFC 854 a real
+      // Telnet server MUST answer with IAC WILL/WONT 05. Binary/line services
+      // (MySQL, Dovecot, SMTP, SSH, HTTP, ...) never emit IAC in reply, so a
+      // single valid negotiation in the *response to our probe* is conclusive.
+      if (!confirmed) {
+        try { conn.SendHex("fffd05"); } catch (e) {}
+        var resp = recvBytes(conn, 256);
+        if (telnetNegotiations(resp) >= 1) confirmed = true;
+        for (var k = 0; k < resp.length; k++) raw.push(resp[k]);
+      }
+
+      try { conn.Close(); } catch (e) {}
+
+      // Not a Telnet IAC speaker == not Telnet. Eliminates the MySQL, Dovecot,
+      // SMTP, SSH, HTTP, ... false positives.
+      if (!confirmed) return;
+      var hits = telnetNegotiations(raw);
+
+      // Readable banner from the printable bytes only.
+      var banner = "";
+      for (var j = 0; j < raw.length; j++) {
+        var ch = raw[j];
+        banner += (ch >= 0x20 && ch <= 0x7e) ? String.fromCharCode(ch) : " ";
+      }
+      banner = banner.replace(/\s+/g, " ").substring(0, 200).trim();
 
       var result = {
         "host": host,
         "port": port,
-        "iac": hasIAC,
-        "banner": clean
+        "telnet": true,
+        "iac_negotiations": hits,
+        "banner": banner
       };
       Export(result);
       to_json(result);
@@ -82,7 +134,7 @@ javascript:
     matchers:
       - type: dsl
         dsl:
-          - 'len(response) > 0'
+          - 'contains(response, "telnet:true")'
 
     extractors:
       - type: dsl
