@@ -5,19 +5,30 @@ info:
   author: Flawfence
   severity: medium
   description: |
-    This template attempts to fuzz default passwords on a Basic Authentication-protected endpoint.
-    It first checks if Basic Authentication is available on the endpoint and then tries to authenticate using a payload list of common default passwords.
+    Detects HTTP Basic Authentication endpoints that accept default / common
+    credentials.
+
+    False-positive hardened with a three-stage flow:
+      1. The endpoint must actually require Basic Auth (401 + WWW-Authenticate: Basic).
+      2. A deliberately-invalid random credential must be rejected with 401 —
+         this proves the server really validates credentials (kills the common
+         "returns 200/403 for any Authorization header" and
+         "403-instead-of-401 on wrong creds" false positives).
+      3. Only then is a 200 from a default credential reported, and the fuzzing
+         stops at the first valid pair (one finding per host, not one per combo).
   tags: auth,default-login
 
-flow: http(1) && http(2)
+flow: http(1) && http(2) && http(3)
 
 http:
+  # 1. The endpoint must be Basic-Auth protected (401 + WWW-Authenticate: Basic)
   - id: check-basic-auth
     raw:
       - |
         GET / HTTP/1.1
         Host: {{Hostname}}
 
+    matchers-condition: and
     matchers:
       - type: status
         status:
@@ -25,17 +36,29 @@ http:
         internal: true
 
       - type: regex
+        part: header
         regex:
-          - 'Www-Authenticate: Basic realm=".*"'
+          - '(?i)WWW-Authenticate:\s*Basic'
         internal: true
 
-    extractors:
-      - type: regex
-        name: basic_realm
-        regex:
-          - 'Www-Authenticate: Basic realm="(.*?)"'
+  # 2. Anti-FP gate: a clearly-invalid credential MUST be rejected with 401.
+  #    If the server answers anything else (200/403/redirect) for bad creds it
+  #    does not really validate them — abort before fuzzing.
+  - id: reject-invalid-cred
+    raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: Basic {{base64("flawfence_invalid_x9q7:wrong_pw_7z3k1q8w")}}
+
+    matchers:
+      - type: status
+        status:
+          - 401
         internal: true
 
+  # 3. Try default credentials. A valid pair returns 200 (wrong pairs return 401,
+  #    proven distinguishable by step 2). Stop at the first valid pair.
   - id: fuzz-basic-auth
     raw:
       - |
@@ -44,6 +67,7 @@ http:
         Authorization: Basic {{base64(username + ":" + password)}}
 
     attack: clusterbomb
+    stop-at-first-match: true
     payloads:
       username:
         - username
@@ -176,6 +200,10 @@ http:
 
     matchers:
       - type: status
-        negative: true
         status:
-          - 401
+          - 200
+
+    extractors:
+      - type: dsl
+        dsl:
+          - '"valid basic-auth credential: " + username + ":" + password'
