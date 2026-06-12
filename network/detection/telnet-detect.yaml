@@ -92,11 +92,24 @@ javascript:
       // coincidental IAC-like byte pair.
       var confirmed = telnetNegotiations(raw) >= 2;
 
-      // Otherwise, actively probe: IAC DO STATUS (FF FD 05). Per RFC 854 a real
-      // Telnet server MUST answer with IAC WILL/WONT 05. Binary/line services
-      // (MySQL, Dovecot, SMTP, SSH, HTTP, ...) never emit IAC in reply, so a
-      // single valid negotiation in the *response to our probe* is conclusive.
-      if (!confirmed) {
+      // A real Telnet server's first byte is IAC (0xFF). Line-oriented services
+      // greet with a printable-ASCII status banner instead: FTP/SMTP "220 ...",
+      // POP3 "+OK", IMAP "* OK", SSH "SSH-2.0", HTTP "HTTP/". Crucially, the FTP
+      // and SMTP *control* channels are themselves Telnet-based (RFC 959 / RFC
+      // 821), so they faithfully answer our IAC DO STATUS probe with IAC WONT --
+      // which made the active probe report every FTP/SMTP/mail server as Telnet.
+      // If the server already greeted us in ASCII it is a line protocol, never
+      // Telnet, so we must not probe it.
+      function hasAsciiGreeting(bytes) {
+        return bytes.length > 0 && bytes[0] >= 0x20 && bytes[0] <= 0x7e;
+      }
+
+      // Only actively probe a silent / binary-leading port (no ASCII greeting):
+      // IAC DO STATUS (FF FD 05). Per RFC 854 a real Telnet server MUST answer
+      // with IAC WILL/WONT 05; a truly silent telnetd reveals itself only when
+      // prompted. We deliberately skip this for ASCII-greeting servers because
+      // FTP/SMTP would answer the IAC and be misclassified as Telnet.
+      if (!confirmed && !hasAsciiGreeting(raw)) {
         try { conn.SendHex("fffd05"); } catch (e) {}
         var resp = recvBytes(conn, 256);
         if (telnetNegotiations(resp) >= 1) confirmed = true;
