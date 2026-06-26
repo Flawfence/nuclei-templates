@@ -1,0 +1,79 @@
+id: glpi-telemetry-exposure
+
+info:
+  name: GLPI Telemetry Endpoint - Unauthenticated Exposure
+  author: flawfence
+  severity: low
+  description: |
+    GLPI exposes a telemetry endpoint (ajax/telemetry.php) that returns a JSON
+    document describing the instance: exact GLPI and PHP versions, database engine
+    and version, web server, operating system and enabled plugins. On a hardened
+    deployment this endpoint requires authentication (HTTP 302 to the login). When
+    it answers 200 with the telemetry JSON to anonymous users, it discloses a full
+    technology fingerprint useful for targeting known CVEs. This is a deployment
+    exposure controlled by the operator's access rules.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/en/latest/advanced/telemetry.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-200
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,exposure,telemetry,disclosure,glpi-project
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/ajax/telemetry.php"
+      - "{{BaseURL}}/glpi/ajax/telemetry.php"
+
+    stop-at-first-match: true
+    extractors:
+      - type: regex
+        name: glpi_version
+        part: body
+        group: 1
+        regex:
+          - '"glpi":\{"version":"([^"]+)"'
+          - '"version":"([^"]+)"'
+      - type: regex
+        name: php_version
+        part: body
+        group: 1
+        regex:
+          - '"php":\{[^}]*"version":"([^"]+)"'
+      - type: regex
+        name: db_engine
+        part: body
+        group: 1
+        regex:
+          - '"db":\{[^}]*"(?:engine|version)":"([^"]+)"'
+          - '"engine":"([^"]+)"'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        condition: and
+        words:
+          - '"glpi"'
+          - '"version"'
+          - '"db"'
+
+      - type: word
+        part: body
+        condition: or
+        words:
+          - '"engine"'
+          - '"php"'
+          - '"plugins"'
+          - '"web_server"'
+
+      - type: status
+        status:
+          - 200

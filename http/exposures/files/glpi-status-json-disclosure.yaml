@@ -1,0 +1,86 @@
+id: glpi-status-json-disclosure
+
+info:
+  name: GLPI status.php - Infrastructure & LDAP Disclosure (JSON format)
+  author: flawfence
+  severity: low
+  description: |
+    GLPI 9.5+/10.x/11.x expose a public status.php endpoint that returns a JSON
+    health document. Unlike the legacy plain-text format, this JSON reveals the
+    backend topology to unauthenticated users: database/replica status, whether
+    an LDAP directory is configured (and how many servers), CAS, IMAP and mail
+    collector usage, and the number of cron tasks. This aids reconnaissance and
+    should be restricted by source IP at the reverse proxy.
+    Complements glpi-status-page.yaml / glpi-status-ldap-domain-disclosure.yaml
+    which only match the older non-JSON output.
+  reference:
+    - https://glpi-project.org/
+    - https://glpi-developer-documentation.readthedocs.io/en/master/devapi/index.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-200
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: glpi-project
+    product: glpi
+    shodan-query: http.html:"glpi"
+  tags: glpi,exposure,status,disclosure,glpi-project,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/status.php"
+      - "{{BaseURL}}/glpi/status.php"
+
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: word
+        part: body
+        words:
+          - '"glpi"'
+          - '"status"'
+          - '"db"'
+        condition: and
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        name: ldap_status
+        part: body
+        group: 1
+        regex:
+          - '"ldap":\{"status":"([A-Z_]+)"'
+
+      - type: regex
+        name: db_status
+        part: body
+        group: 1
+        regex:
+          - '"db":\{"status":"([A-Z_]+)"'
+
+      - type: regex
+        name: glpi_status
+        part: body
+        group: 1
+        regex:
+          - '"glpi":\{"status":"([A-Z_]+)"'
+
+      - type: regex
+        name: cron_proof
+        part: body
+        group: 1
+        regex:
+          - '"status_msg":"([^"]*TOTAL[^"]*)"'
+          - '"crontasks":\{"status":"([A-Z_]+)"'

@@ -1,0 +1,68 @@
+id: glpi-sql-dump-exposure
+
+info:
+  name: GLPI SQL Dump / Backup - Exposed
+  author: flawfence
+  severity: high
+  description: |
+    GLPI stores generated database dumps under files/_dumps/. When the web root is
+    misconfigured (docroot above public/, or missing deny rules) these .sql /
+    .sql.gz files become directly downloadable without authentication, exposing
+    the full GLPI database including password hashes, API tokens and personal
+    data. This template also probes common backup filenames left in the web root
+    by an operator. This is a deployment / hardening issue, not a GLPI code flaw.
+  reference:
+    - https://glpi-install.readthedocs.io/en/latest/install/index.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+    cvss-score: 7.5
+    cwe-id: CWE-530
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 10
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,exposure,backup,sqli,glpi-project,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/files/_dumps/glpi.sql"
+      - "{{BaseURL}}/glpi/files/_dumps/glpi.sql"
+      - "{{BaseURL}}/files/_dumps/dump.sql"
+      - "{{BaseURL}}/glpi.sql"
+      - "{{BaseURL}}/glpi.sql.gz"
+      - "{{BaseURL}}/dump.sql"
+      - "{{BaseURL}}/backup.sql"
+      - "{{BaseURL}}/database.sql"
+      - "{{BaseURL}}/glpi.sql.bak"
+      - "{{BaseURL}}/db_backup.sql"
+
+    stop-at-first-match: true
+    extractors:
+      - type: regex
+        name: sql_proof
+        part: body
+        group: 1
+        regex:
+          - '(CREATE TABLE [`"]?glpi_[a-z_]+)'
+          - '(INSERT INTO [`"]?glpi_[a-z_]+)'
+          - '(-- (?:MySQL|MariaDB) dump[^\n]{0,80})'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "CREATE TABLE"
+          - "INSERT INTO"
+          - "MySQL dump"
+          - "MariaDB dump"
+          - "glpi_users"
+          - "glpi_configs"
+        condition: or
+
+      - type: status
+        status:
+          - 200

@@ -1,0 +1,70 @@
+id: glpi-inventory-endpoint-enabled
+
+info:
+  name: GLPI Native Inventory - Unauthenticated Intake Enabled
+  author: flawfence
+  severity: low
+  description: |
+    GLPI's native inventory feature exposes /front/inventory.php, which accepts
+    agent communication WITHOUT authentication when the feature is enabled. This
+    template sends a harmless, non-mutating "prolog" handshake (a random deviceid,
+    no inventory content, so no asset is created) and confirms the feature is
+    actually enabled when the server answers HTTP 200 with the agent directive
+    {"PROLOG_FREQ":...,"RESPONSE":"SEND"} - i.e. it is inviting anonymous clients
+    to submit inventory. This is a strong signal, not just the presence of the
+    endpoint: a disabled instance does not return RESPONSE:SEND.
+    Risk: any unauthenticated party can inject/alter inventory (asset data
+    integrity) and reach the inventory request parser, which is the surface behind
+    several GLPI inventory vulnerabilities. Restrict the endpoint to the agents'
+    source networks if it need not be Internet-facing.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/en/latest/inventory/index.html
+    - https://github.com/glpi-project/glpi/security/advisories
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-668
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 1
+    vendor: glpi-project
+    product: glpi
+    shodan-query: http.html:"glpi"
+  tags: glpi,inventory,exposure,glpi-project,misconfig
+
+http:
+  - raw:
+      - |
+        POST /front/inventory.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"action":"prolog","deviceid":"nuclei-{{rand_text_alphanumeric(10)}}"}
+
+    extractors:
+      - type: regex
+        name: prolog_response
+        part: body
+        group: 1
+        regex:
+          - '(\{[^}]*"RESPONSE"\s*:\s*"SEND"[^}]*\})'
+          - '("PROLOG_FREQ"\s*:\s*"?\d+"?)'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        condition: and
+        words:
+          - '"RESPONSE"'
+          - 'SEND'
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: status
+        status:
+          - 200

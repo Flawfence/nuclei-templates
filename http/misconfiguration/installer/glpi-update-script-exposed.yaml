@@ -1,0 +1,77 @@
+id: glpi-update-script-exposed
+
+info:
+  name: GLPI install/ Directory Web-Reachable (update.php)
+  author: flawfence
+  severity: low
+  description: |
+    GLPI ships a web installer under install/. After setup this directory should
+    be removed or denied at the web server; here install/update.php still returns
+    HTTP 200 and renders the GLPI installer page, confirming the install/ folder
+    is web-reachable (a hardening violation that also discloses the exact build).
+    NOTE: on GLPI 10.0.x / 11.x the updater is self-protected - accessing it
+    directly returns the guard message "Impossible to accomplish an update by this
+    way!" ("Impossible d'acceder a la mise a jour de cette facon !"), so the
+    migration cannot be driven from the browser. The update_state extractor
+    reveals whether the page is blocked (low risk, just remove install/) or
+    actually presents an actionable wizard (treat as high). The official
+    glpi-installer.yaml only checks install/install.php "Setup GLPI" and misses
+    this update.php exposure.
+  reference:
+    - https://glpi-install.readthedocs.io/en/latest/install/index.html
+    - https://glpi-project.org/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 4.3
+    cwe-id: CWE-1188
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: glpi-project
+    product: glpi
+    shodan-query: http.html:"glpi"
+  tags: glpi,misconfig,install,exposure,glpi-project
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/install/update.php"
+      - "{{BaseURL}}/glpi/install/update.php"
+
+    stop-at-first-match: true
+
+    extractors:
+      - type: regex
+        name: installer_title
+        part: body
+        group: 1
+        regex:
+          - '(?i)(<title>glpi (?:setup|installation|installazione)[^<]*</title>)'
+          - '(?i)(<title>instalaci[^<]*glpi[^<]*</title>)'
+
+      - type: regex
+        name: update_state
+        part: body
+        group: 1
+        regex:
+          - '(Impossible to accomplish an update by this way[^<]*)'
+          - '(Impossible d[^<]{0,4}acc[^<]{0,6}der[^<]{0,40}mise[^<]{0,6}jour[^<]*)'
+          - '(name="update"[^>]*>)'
+          - '(id="step"[^>]*>)'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        case-insensitive: true
+        words:
+          - "<title>glpi setup"
+          - "<title>glpi installation"
+          - "<title>glpi installazione"
+          - "<title>instalación de glpi"
+        condition: or
+
+      - type: status
+        status:
+          - 200

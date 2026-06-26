@@ -1,0 +1,56 @@
+id: glpi-caldav-enabled
+
+info:
+  name: GLPI CalDAV/DAV Endpoint - Enabled
+  author: flawfence
+  severity: info
+  description: |
+    GLPI exposes a CalDAV endpoint (caldav.php) used to synchronise planning and
+    reservations. When enabled it answers unauthenticated requests with an
+    HTTP 401 and an application/xml WebDAV body. This increases the attack and
+    credential-bruteforce surface (HTTP Basic over DAV) and should be disabled
+    or IP-restricted if calendar synchronisation is not required externally.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N
+    cwe-id: CWE-200
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,caldav,dav,exposure,glpi-project,discovery
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/caldav.php"
+      - "{{BaseURL}}/glpi/caldav.php"
+
+    stop-at-first-match: true
+    extractors:
+      - type: kval
+        kval:
+          - www_authenticate
+      - type: regex
+        name: dav_proof
+        part: body
+        group: 1
+        regex:
+          - '(<[a-zA-Z]?:?(?:error|response|multistatus)[^>]*>)'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "application/xml"
+          - "WWW-Authenticate"
+        condition: or
+
+      - type: status
+        status:
+          - 401
+          - 207

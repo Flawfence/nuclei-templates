@@ -1,0 +1,121 @@
+id: glpi-login-no-rate-limit
+
+info:
+  name: GLPI Login - No Rate Limiting / Account Lockout
+  author: flawfence
+  severity: medium
+  description: |
+    GLPI core does not implement account lockout, and operators frequently deploy
+    it without a compensating control (fail2ban, WAF, or a reverse-proxy rate
+    limit) in front of /front/login.php. This template performs five invalid login
+    attempts, refreshing the single-use _glpi_csrf_token before each one, and
+    verifies the application still returns the normal "invalid credentials" login
+    response (HTTP 400) for the final attempt - with no HTTP 429, no lockout /
+    captcha message and no hard block. A match indicates the login endpoint is
+    exposed to unthrottled credential brute-force / password spraying. This is a
+    deployment hardening gap (the mitigation lives at the proxy), not a code flaw.
+    NOTE: heuristic - uses bogus credentials only; confirm manually.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-307
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 10
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,misconfig,login,auth,glpi-project
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        POST /front/login.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Referer: {{BaseURL}}/
+
+        _glpi_csrf_token={{token}}&login_name=nuclei_a_{{rand_text_alpha(6)}}&login_password=Bad_{{rand_text_alpha(8)}}&noAUTO=1&submit=Submit
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        POST /front/login.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Referer: {{BaseURL}}/
+
+        _glpi_csrf_token={{token}}&login_name=nuclei_b_{{rand_text_alpha(6)}}&login_password=Bad_{{rand_text_alpha(8)}}&noAUTO=1&submit=Submit
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        POST /front/login.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Referer: {{BaseURL}}/
+
+        _glpi_csrf_token={{token}}&login_name=nuclei_c_{{rand_text_alpha(6)}}&login_password=Bad_{{rand_text_alpha(8)}}&noAUTO=1&submit=Submit
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        POST /front/login.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Referer: {{BaseURL}}/
+
+        _glpi_csrf_token={{token}}&login_name=nuclei_d_{{rand_text_alpha(6)}}&login_password=Bad_{{rand_text_alpha(8)}}&noAUTO=1&submit=Submit
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        POST /front/login.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Referer: {{BaseURL}}/
+
+        _glpi_csrf_token={{token}}&login_name=nuclei_e_{{rand_text_alpha(6)}}&login_password=Bad_{{rand_text_alpha(8)}}&noAUTO=1&submit=Submit
+
+    req-condition: true
+    extractors:
+      - type: regex
+        name: token
+        part: body
+        internal: true
+        group: 1
+        regex:
+          - 'name="_glpi_csrf_token"\s+value="([0-9a-z]+)"'
+
+      - type: dsl
+        name: attempts_status
+        dsl:
+          - 'concat("5 failed logins, no throttle -> HTTP ", status_code_2, ",", status_code_4, ",", status_code_6, ",", status_code_8, ",", status_code_10)'
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code_10 == 400 || status_code_10 == 200"
+
+      - type: word
+        part: body_10
+        negative: true
+        condition: or
+        words:
+          - "Too many"
+          - "trop de tentatives"
+          - "locked"
+          - "verrouill"
+          - "captcha"
+          - "réessayez plus tard"
+          - "Account locked"
+
+      - type: dsl
+        dsl:
+          - "status_code_10 != 429 && status_code_10 != 403"

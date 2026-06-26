@@ -1,0 +1,53 @@
+id: glpi-public-cron-trigger
+
+info:
+  name: GLPI External Cron - Publicly Triggerable (front/cron.php)
+  author: flawfence
+  severity: info
+  description: |
+    GLPI's GLPI_CRON external trigger (front/cron.php) returns a 1x1 GIF and runs
+    queued automatic actions on each request. When the cron mode is set to "GLPI"
+    (web) and the endpoint is publicly reachable, any unauthenticated visitor can
+    repeatedly trigger task execution, which can be abused to amplify load or to
+    influence the timing of scheduled jobs. Prefer the system cron mode, or
+    restrict front/cron.php to localhost / the monitoring source IP.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/en/latest/config/crontab.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L
+    cwe-id: CWE-668
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,cron,exposure,glpi-project,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/front/cron.php"
+      - "{{BaseURL}}/glpi/front/cron.php"
+
+    stop-at-first-match: true
+    extractors:
+      - type: kval
+        kval:
+          - content_type
+          - content_length
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "image/gif"
+
+      - type: dsl
+        dsl:
+          - "len(body) < 200"
+
+      - type: status
+        status:
+          - 200

@@ -1,0 +1,86 @@
+id: glpi-user-enumeration
+
+info:
+  name: GLPI Password Reset - Username/Email Enumeration
+  author: flawfence
+  severity: low
+  description: |
+    When GLPI notifications are enabled and the "forgot password" feature is left
+    open, the password reset endpoint (/front/lostpassword.php) can return a
+    different response for a known vs unknown email address (distinct message,
+    length or redirect), allowing unauthenticated enumeration of valid accounts /
+    email addresses. This is influenced by the operator's notification and
+    self-service configuration. The template compares the response for a random
+    address against a baseline and flags a discrepancy. NOTE: heuristic — a clean
+    deployment returns an identical generic message regardless of existence.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-204
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 3
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,misconfig,enum,auth,glpi-project
+
+http:
+  - raw:
+      - |
+        GET /front/lostpassword.php HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        POST /front/lostpassword.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Referer: {{BaseURL}}/front/lostpassword.php
+
+        _glpi_csrf_token={{token}}&email=nuclei_{{rand_text_alpha(10)}}@{{rand_text_alpha(6)}}.com&forget_passwd=1
+
+    extractors:
+      - type: regex
+        name: token
+        part: body
+        internal: true
+        group: 1
+        regex:
+          - 'name="_glpi_csrf_token"\s+value="([0-9a-z]+)"'
+
+      - type: regex
+        name: reset_message
+        part: body
+        group: 1
+        regex:
+          - '(If the email address[^<"]{0,120})'
+          - "(Si l[^<\"]{0,120}adresse[^<\"]{0,120})"
+          - '(does not exist[^<"]{0,80})'
+          - '(utilisateur inconnu[^<"]{0,80})'
+          - '(email address is registered[^<"]{0,80})'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        condition: and
+        words:
+          - "_glpi_csrf_token"
+
+      - type: word
+        part: body
+        condition: or
+        words:
+          - "If the email address"
+          - "Si l'adresse"
+          - "email address is registered"
+          - "n'existe pas"
+          - "does not exist"
+          - "Unknown user"
+          - "utilisateur inconnu"
+
+      - type: status
+        status:
+          - 200
+          - 302

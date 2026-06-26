@@ -1,0 +1,59 @@
+id: glpi-api-enabled
+
+info:
+  name: GLPI REST API - Enabled
+  author: flawfence
+  severity: info
+  description: |
+    Detects that the GLPI REST API (apirest.php / api.php) is enabled and
+    reachable without authentication. When enabled, the API increases the
+    attack surface: it is the entry point for credential / app_token based
+    sessions and has historically been affected by authentication and
+    injection vulnerabilities. The endpoint replies with a structured error
+    (e.g. ERROR_APP_TOKEN_PARAMETERS_MISSING) when reachable but unauthenticated.
+    Verify the API is required externally; otherwise restrict it by source IP.
+  reference:
+    - https://github.com/glpi-project/glpi/blob/main/apirest.md
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-200
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: glpi-project
+    product: glpi
+    shodan-query: http.html:"glpi"
+  tags: glpi,api,exposure,glpi-project,discovery
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/apirest.php/initSession"
+      - "{{BaseURL}}/glpi/apirest.php/initSession"
+
+    stop-at-first-match: true
+    extractors:
+      - type: regex
+        name: api_error
+        part: body
+        group: 1
+        regex:
+          - '"(ERROR_[A-Z_]+)"'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "ERROR_APP_TOKEN_PARAMETERS_MISSING"
+          - "ERROR_LOGIN_PARAMETERS_MISSING"
+          - "ERROR_WRONG_APP_TOKEN_PARAMETER"
+          - "app_token"
+        condition: or
+
+      - type: status
+        status:
+          - 400
+          - 401

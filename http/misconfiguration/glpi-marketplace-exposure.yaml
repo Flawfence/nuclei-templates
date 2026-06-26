@@ -1,0 +1,66 @@
+id: glpi-marketplace-exposure
+
+info:
+  name: GLPI Marketplace / Plugins Directory - Exposed
+  author: flawfence
+  severity: low
+  description: |
+    GLPI's marketplace and plugins directories (marketplace/, plugins/) can be left
+    browsable or directly readable when the web server is misconfigured. Exposure
+    lets an unauthenticated attacker enumerate installed third-party plugins and
+    their versions (the primary source of GLPI vulnerabilities), and in the worst
+    case read plugin source, setup scripts or a marketplace registration key.
+    This template detects a directory index or readable marketplace/plugin paths.
+    It is a deployment/web-server hardening issue, not a GLPI code flaw.
+  reference:
+    - https://glpi-user-documentation.readthedocs.io/en/latest/marketplace.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-548
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 5
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,misconfig,exposure,plugins,glpi-project
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/marketplace/"
+      - "{{BaseURL}}/glpi/marketplace/"
+      - "{{BaseURL}}/plugins/"
+      - "{{BaseURL}}/glpi/plugins/"
+      - "{{BaseURL}}/marketplace/.registration.key"
+
+    stop-at-first-match: true
+    extractors:
+      - type: regex
+        name: listed_entries
+        part: body
+        group: 1
+        regex:
+          - '<a href="([^"?][^"]*)">'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        condition: and
+        words:
+          - "Index of"
+          - "Parent Directory"
+
+      - type: word
+        part: body
+        case-insensitive: true
+        condition: or
+        words:
+          - "marketplace"
+          - "plugin"
+
+      - type: status
+        status:
+          - 200

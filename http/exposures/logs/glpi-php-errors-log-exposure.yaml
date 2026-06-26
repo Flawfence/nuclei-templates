@@ -1,0 +1,72 @@
+id: glpi-php-errors-log-exposure
+
+info:
+  name: GLPI php-errors.log - Information Disclosure
+  author: flawfence
+  severity: medium
+  description: |
+    GLPI writes runtime PHP errors to files/_log/php-errors.log (and other logs
+    under files/_log/). When the web root is misconfigured (web server pointing
+    above the public/ directory, or missing deny rules), these logs become
+    directly downloadable without authentication and leak absolute filesystem
+    paths, SQL fragments, stack traces, usernames and internal hostnames.
+    The existing glpi-directory-listing.yaml only catches an index listing; this
+    template detects direct retrieval of the log files themselves.
+  reference:
+    - https://glpi-install.readthedocs.io/en/latest/install/index.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-532
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 6
+    vendor: glpi-project
+    product: glpi
+  tags: glpi,exposure,logs,glpi-project,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/files/_log/php-errors.log"
+      - "{{BaseURL}}/glpi/files/_log/php-errors.log"
+      - "{{BaseURL}}/files/_log/sql-errors.log"
+      - "{{BaseURL}}/glpi/files/_log/sql-errors.log"
+      - "{{BaseURL}}/files/_log/event.log"
+      - "{{BaseURL}}/glpi/files/_log/event.log"
+
+    stop-at-first-match: true
+    extractors:
+      - type: regex
+        name: log_proof
+        part: body
+        group: 1
+        regex:
+          - '(\[\d{4}-\d{2}-\d{2}[^\]]*\][^\n]{0,160})'
+          - '(PHP (?:Warning|Notice|Fatal error|Deprecated)[^\n]{0,160})'
+          - '((?:/var/www|/srv|/opt|/usr/share)[^\s:"]+\.php)'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "PHP message"
+          - "Stack trace"
+          - "[sql]"
+          - "GLPI\\"
+          - "/glpi/"
+          - "Toolbox::"
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "text/plain"
+          - "application/octet-stream"
+        condition: or
+
+      - type: status
+        status:
+          - 200
