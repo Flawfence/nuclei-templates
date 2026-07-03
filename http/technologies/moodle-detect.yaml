@@ -1,0 +1,55 @@
+id: moodle-detect
+
+info:
+  name: Moodle LMS - Detect
+  author: trackflaw
+  severity: info
+  description: |
+    Detects a Moodle Learning Management System instance through multiple
+    reliable and hardening-resistant signals (MoodleSession cookie, login form
+    markup and moodle CSS/theme references). Attempts to extract the release
+    version from the changelog when it is exposed.
+  reference:
+    - https://github.com/moodle/moodle
+    - https://docs.moodle.org/en/Main_page
+  classification:
+    cpe: cpe:2.3:a:moodle:moodle:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: moodle
+    product: moodle
+    shodan-query: http.html:"moodle"
+  tags: tech,moodle,detect,discovery
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/login/index.php"
+      - "{{BaseURL}}/lib/upgrade.txt"
+
+    stop-at-first-match: true
+    host-redirects: true
+    max-redirects: 2
+
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        dsl:
+          - 'contains(tolower(header), "moodlesession")'
+          - 'contains(tolower(body), "content=\"moodle") || contains(tolower(body), "\"name\":\"moodle\"") || contains(tolower(body), "logintoken")'
+        condition: or
+
+      - type: word
+        part: body
+        words:
+          - "This files describes API changes"
+
+    extractors:
+      - type: regex
+        part: body
+        name: version
+        group: 1
+        regex:
+          - '(?i)moodle[ -]v?([0-9]+\.[0-9]+(\.[0-9]+)?)'
+          - '=== ([0-9]+\.[0-9]+(\.[0-9]+)?) ==='

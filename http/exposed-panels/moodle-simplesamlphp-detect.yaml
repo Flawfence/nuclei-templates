@@ -1,0 +1,50 @@
+id: moodle-simplesamlphp-detect
+
+info:
+  name: Moodle SimpleSAMLphp SSO - Detect
+  author: trackflaw
+  severity: info
+  description: |
+    Detects a Moodle instance fronted by a SimpleSAMLphp based SSO (auth_saml2 /
+    auth_simplesaml). SimpleSAMLphp sets an MDL_SSP_SessID session cookie and
+    exposes a /simplesaml/ SSO endpoint. Identifying the SSO layer helps map the
+    authentication surface and the attached SimpleSAMLphp version, which has its
+    own vulnerability history.
+  reference:
+    - https://simplesamlphp.org/
+    - https://moodle.org/plugins/auth_saml2
+  classification:
+    cpe: cpe:2.3:a:moodle:moodle:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: moodle
+    product: moodle
+    shodan-query: http.html:"moodle"
+  tags: panel,moodle,saml,sso,simplesamlphp,detect,discovery
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/login/index.php"
+      - "{{BaseURL}}/simplesaml/module.php/core/frontpage_welcome.php"
+
+    stop-at-first-match: true
+    host-redirects: true
+    max-redirects: 2
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "MDL_SSP_SessID"
+          - "SimpleSAMLSessionID"
+          - "SimpleSAMLAuthToken"
+        condition: or
+
+      - type: dsl
+        dsl:
+          - 'status_code == 200'
+          - 'contains(tolower(body), "simplesamlphp")'
+        condition: and
