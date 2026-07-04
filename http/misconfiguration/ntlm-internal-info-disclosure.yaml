@@ -1,0 +1,79 @@
+id: ntlm-internal-info-disclosure
+
+info:
+  name: NTLM Authentication - Internal Information Disclosure
+  author: trackflaw
+  severity: medium
+  description: |
+    An HTTP endpoint negotiates Windows NTLM authentication and is reachable by an
+    unauthenticated attacker. By sending an NTLM Type-1 (NEGOTIATE) message that
+    contains no credentials, the server replies with an NTLM Type-2 (CHALLENGE)
+    message whose Target Info block discloses internal infrastructure details:
+    NetBIOS/DNS domain name, Active Directory forest name, internal computer
+    FQDN and the Windows OS build. This is especially impactful when the endpoint
+    is published to the Internet (e.g. NDES/SCEP, Exchange/OWA, ADFS, RD Web via
+    Azure AD Application Proxy or a reverse proxy in pass-through mode).
+  reference:
+    - https://medium.com/swlh/internal-information-disclosure-using-hidden-ntlm-authentication-18de17675666
+    - https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-nlmp/
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-200
+  metadata:
+    max-request: 12
+    shodan-query: 'http.title:"NTLM"'
+  tags: ntlm,ntlmssp,misconfig,disclosure,windows,ad,ndes,exchange
+
+http:
+  - raw:
+      - |
+        GET {{path}} HTTP/1.1
+        Host: {{Hostname}}
+        Authorization: NTLM TlRMTVNTUAABAAAAB4IIogAAAAAAAAAAAAAAAAAAAAAKAGVKAAAADw==
+
+    payloads:
+      path:
+        - "/certsrv/mscep_admin/"
+        - "/ews/"
+        - "/owa/"
+        - "/rpc/"
+        - "/adfs/ls/wia"
+        - "/powershell/"
+        - "/autodiscover/"
+        - "/aspnet_client/"
+        - "/certsrv/"
+        - "/certenroll/"
+        - "/oab/"
+        - "/"
+
+    threads: 12
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      # A Type-2 CHALLENGE is returned (base64 of "NTLMSSP\x00\x02..." starts with TlRMTVNTUAAC)
+      - type: word
+        part: header
+        case-insensitive: true
+        words:
+          - "www-authenticate: ntlm tlrmtvntuaac"
+
+      - type: status
+        status:
+          - 401
+
+    extractors:
+      # Raw Type-2 challenge (base64) - kept internal, feeds the decode below
+      - type: regex
+        name: ntlm_type2
+        internal: true
+        part: header
+        group: 1
+        regex:
+          - "NTLM (TlRMTVNTUAAC[a-zA-Z0-9+/=]+)"
+
+      # Decoded Target Info: strip the UTF-16 null bytes so the internal
+      # domain / host / forest names become human readable in the output.
+      - type: dsl
+        dsl:
+          - 'replace(base64_decode(ntlm_type2), hex_decode("00"), "")'
