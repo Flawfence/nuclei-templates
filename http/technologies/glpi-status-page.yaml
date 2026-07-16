@@ -3,7 +3,7 @@ id: glpi-status-page
 info:
   name: GLPI Status Page - Detect
   author: canberbamber,flawfence
-  severity: info
+  severity: low
   description: |
     Detects an exposed, unauthenticated GLPI status.php health endpoint. Beyond
     fingerprinting GLPI, the page discloses internal infrastructure topology
