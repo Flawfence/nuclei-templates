@@ -1,0 +1,55 @@
+id: wordpress-btwn-beetween-unauth-enum
+
+info:
+  name: WordPress Beetween (btwn) Bridge - Unauthenticated Identifier Enumeration
+  author: Flawfence
+  severity: low
+  description: |
+    The "btwn" WordPress plugin (a bridge to the Beetween recruitment ATS) registers a REST namespace
+    (btwn/v1) without a permission_callback, so its routes are reachable anonymously. Requesting
+    /wp-json/btwn/v1/wids-by-id with id=0 (or no id) returns the full list of Beetween job-widget IDs
+    configured on the site, and /wp-json/btwn/v1/ids-by-wid?wid=<id> resolves the matching WordPress
+    post IDs - all without authentication. This discloses internal ATS identifiers and the post/widget
+    mapping to anonymous users.
+  reference:
+    - https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/
+    - https://support.beetween.com/en/knowledge/documentation-api
+  remediation: |
+    Register a permission_callback on the btwn/v1 REST routes instead of exposing them anonymously. If
+    the mapping must stay public for the front-end, return identifiers only for published, publicly
+    visible job posts and reject the "return everything" behaviour (empty / id=0). Otherwise require an
+    authenticated capability or a valid REST nonce (X-WP-Nonce) to access these endpoints.
+  classification:
+    cwe-id: CWE-200
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+  tags: wordpress,beetween,btwn,exposure,unauth,recruitment,rest
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/wp-json/btwn/v1/wids-by-id?id=0"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      # non-empty JSON array of Beetween widget IDs => confirmed unauthenticated data exposure
+      - type: regex
+        part: body
+        regex:
+          - '^\[\s*"[A-Za-z0-9]{6,16}"'
+
+    extractors:
+      - type: regex
+        part: body
+        name: widget_ids
+        regex:
+          - '"[A-Za-z0-9]{6,16}"'
