@@ -1,0 +1,48 @@
+id: glpi-update-page
+
+info:
+  name: GLPI Update Page - Exposure
+  author: flawfence
+  severity: low
+  description: |
+    The GLPI database update page (/install/update.php) is reachable without
+    authentication. Even when it refuses to run the migration ("Impossible
+    d'accéder à la mise à jour de cette façon"), a reachable installer/updater
+    directory after setup is a hardening gap: depending on the GLPI version and
+    state (e.g. a pending schema migration) the updater can be abused to trigger
+    an unauthenticated database update. The install/ directory should be removed
+    or access-restricted once GLPI is installed.
+  reference:
+    - https://glpi-install.readthedocs.io/en/latest/install/index.html
+    - https://glpi-project.org/
+  classification:
+    cpe: cpe:2.3:a:glpi-project:glpi:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 1
+    vendor: glpi-project
+    product: glpi
+    shodan-query: html:"GLPI Installation"
+  tags: misconfig,install,exposure,glpi
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/install/update.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        case-insensitive: true
+        condition: or
+        words:
+          # Installer/updater page title — locale-dependent ("GLPI setup" in the
+          # default en_GB an unauthenticated scanner receives, "GLPI Installation"
+          # when a session locale is applied).
+          - "GLPI setup"
+          - "GLPI Installation"
+
+      - type: status
+        status:
+          - 200
