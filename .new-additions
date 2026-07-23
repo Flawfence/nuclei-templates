@@ -55,3 +55,4 @@ http/technologies/vespa-detect.yaml
 javascript/cves/2026/CVE-2026-15409.yaml
 javascript/cves/2026/CVE-2026-48908.yaml
 javascript/cves/2026/CVE-2026-48909.yaml
+network/cves/2023/CVE-2023-34992.yaml
