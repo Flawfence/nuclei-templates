@@ -1,0 +1,70 @@
+id: symfony-debug-exception-disclosure
+
+info:
+  name: Symfony APP_DEBUG Enabled in Production (Debug Exception Page)
+  author: flawfence
+  severity: medium
+  description: |
+    The Symfony application runs with APP_DEBUG enabled in production. Any invalid or
+    exception-raising route returns the full debug exception page (HTML and JSON variants)
+    disclosing stack traces, absolute server file paths and framework/bundle layout, and on
+    application-level exceptions the custom application source code (CWE-215).
+    This targets the debug EXCEPTION PAGE itself, not the web profiler / debug toolbar
+    (symfony-debug.yaml), so it fires even when /_profiler and app_dev.php return 404.
+  reference:
+    - https://symfony.com/doc/current/configuration.html
+    - https://github.com/synacktiv/eos
+  classification:
+    cwe-id: CWE-215
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cpe: cpe:2.3:a:sensiolabs:symfony:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 2
+    vendor: sensiolabs
+    product: symfony
+    shodan-query: http.component:"Symfony"
+  tags: symfony,debug,misconfig,exposure,php,disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/{{randstr}}"
+    headers:
+      Accept: text/html
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'trace-file-path'
+          - 'exception-summary'
+        condition: and
+      - type: status
+        status:
+          - 404
+          - 500
+
+  - method: GET
+    path:
+      - "{{BaseURL}}/{{randstr}}"
+    headers:
+      Accept: application/json
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - 'application/json'
+      - type: word
+        part: body
+        words:
+          - '"class"'
+          - '"trace"'
+          - '"file"'
+        condition: and
+      - type: status
+        status:
+          - 404
+          - 500
