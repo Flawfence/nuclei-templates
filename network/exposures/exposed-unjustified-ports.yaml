@@ -1,21 +1,27 @@
 id: exposed-unjustified-ports
 
 info:
-  name: Exposed Unjustified Ports Detection
+  name: Exposed Sensitive Service on Web Server
   author: Flawfence
   severity: medium
   description: |
-    Detects services exposed on a web server beyond the expected web ports (80/443).
-    If the target host has 80 or 443 open, it is considered a web server, and any other
-    open port reachable on that host is reported as an unjustified exposure that should
-    not be publicly accessible (SSH, mail, databases, admin panels, etc.).
+    Detects sensitive, should-be-internal services (databases, caches, message
+    brokers, container/orchestration APIs, remote-administration surfaces) exposed
+    on a host that also serves web traffic (80/443 open).
+    Standard public-facing internet services are treated as justified and are NOT
+    reported: web (80/443/8080/8443), mail (SMTP/submission 25/465/587/2525,
+    IMAP 143/993, POP3 110/995), DNS (53), SSH (22) and FTP control (21). Mail,
+    FTP and SSH banners are recognised on non-standard ports too, so mail relays
+    such as OVH's SMTP proxy (e.g. port 5025) are not flagged.
+    Only a positively identified sensitive service is reported; an unidentified
+    service on a non-standard port is never reported, to avoid false positives.
     Hosts that are not web servers are out of scope and skipped.
   tags: network,exposure,ports,misconfiguration
 
 javascript:
   - code: |
       var net = require("nuclei/net");
-      var target = Host;  // This will be the full input like "1.2.3.4:1234"
+      var target = Host;  // full input like "1.2.3.4:1234"
 
       var parts = target.split(":");
       if (parts.length < 2) {
@@ -29,13 +35,35 @@ javascript:
         return;
       }
 
-      // Web ports themselves are the justification criterion — never report them.
-      if (port === 80 || port === 443) {
+      // Ports that are legitimately public on internet-facing hosts. Never flag.
+      // web + smtp/submission + imap + pop3 + dns + ssh + ftp-control
+      var justifiedPorts = {
+        80: 1, 443: 1, 8080: 1, 8443: 1,
+        25: 1, 465: 1, 587: 1, 2525: 1,
+        143: 1, 993: 1,
+        110: 1, 995: 1,
+        53: 1, 22: 1, 21: 1
+      };
+      if (justifiedPorts[port]) {
         return;
       }
 
-      // Only flag this port if the host is actually a web server (80 or 443 reachable).
-      // Otherwise the host is out of scope for this check.
+      // Sensitive services that should essentially never be publicly reachable,
+      // keyed by their default port. Presence here => reportable exposure.
+      var sensitivePorts = {
+        3306: "MySQL", 5432: "PostgreSQL", 1433: "MSSQL", 1521: "Oracle",
+        27017: "MongoDB", 27018: "MongoDB", 6379: "Redis", 11211: "Memcached",
+        9200: "Elasticsearch", 9300: "Elasticsearch", 5601: "Kibana",
+        9042: "Cassandra", 5984: "CouchDB", 8086: "InfluxDB", 8123: "ClickHouse",
+        2375: "Docker API", 2376: "Docker API", 6443: "Kubernetes API", 10250: "Kubelet",
+        2379: "etcd", 2380: "etcd", 8500: "Consul",
+        5672: "RabbitMQ", 15672: "RabbitMQ Management", 9092: "Kafka", 2181: "ZooKeeper",
+        61616: "ActiveMQ", 1883: "MQTT",
+        3389: "RDP", 5900: "VNC", 5901: "VNC", 5902: "VNC", 6000: "X11",
+        5985: "WinRM", 5986: "WinRM", 445: "SMB", 23: "Telnet"
+      };
+
+      // Only consider hosts that are actually web servers (80 or 443 reachable).
       var isWebServer = false;
       var probe80 = net.Open("tcp", host + ":80");
       if (probe80) {
@@ -48,35 +76,59 @@ javascript:
           probe443.Close();
         }
       }
-
       if (!isWebServer) {
         return;
       }
 
-      // Host is a web server but exposes an extra port — try to identify the service.
+      // Grab the service banner to identify what is really listening.
       var conn = net.Open("tcp", host + ":" + port);
       if (!conn) {
         return;
       }
-
       var banner = conn.RecvString(1024);
       conn.Close();
 
-      var service = "unknown";
       var bannerSample = "";
+      var b = "";
+      var bt = "";
       if (banner) {
-        bannerSample = banner.substring(0, 100).replace(/[\r\n]+/g, " ");
-        var b = banner.toLowerCase();
-        if (b.includes("ssh")) service = "SSH";
-        else if (b.includes("imap")) service = "IMAP";
-        else if (b.includes("pop3")) service = "POP3";
-        else if (b.includes("esmtp") || b.includes("smtp")) service = "SMTP";
-        else if (b.includes("ftp")) service = "FTP";
-        else if (b.includes("mysql") || b.includes("mariadb")) service = "MySQL";
-        else if (b.includes("postgresql") || b.includes("postgres")) service = "PostgreSQL";
+        bannerSample = banner.substring(0, 120).replace(/[\r\n]+/g, " ");
+        b = banner.toLowerCase();
+        bt = banner.replace(/^[\s]+/, "");
+      }
+
+      // A recognised standard public-service banner is justified even on an odd
+      // port (e.g. an OVH SMTP proxy on 5025 greets with "220 ...").
+      if (bt) {
+        if (bt.indexOf("220") === 0) return;                               // SMTP / FTP greeting
+        if (bt.indexOf("+OK") === 0) return;                               // POP3 greeting
+        if (bt.indexOf("* OK") === 0 || bt.indexOf("* PREAUTH") === 0) return; // IMAP greeting
+      }
+      if (b) {
+        if (b.indexOf("ssh-") !== -1) return;                              // SSH
+        if (b.includes("smtp") || b.includes("esmtp") || b.includes("imap") ||
+            b.includes("pop3") || b.includes("dovecot") || b.includes("postfix") ||
+            b.includes("exim") || b.includes("ftp")) {
+          return;
+        }
+      }
+
+      // Decide whether this is a sensitive service, by default port or by banner.
+      var service = sensitivePorts[port] || "";
+      if (!service && b) {
+        if (b.includes("mysql") || b.includes("mariadb")) service = "MySQL";
+        else if (b.includes("postgres")) service = "PostgreSQL";
         else if (b.includes("mongodb")) service = "MongoDB";
-        else if (b.includes("redis")) service = "Redis";
-        else if (b.includes("http")) service = "HTTP";
+        else if (b.includes("redis") || b.includes("-noauth") || b.includes("noauth")) service = "Redis";
+        else if (b.includes("memcached")) service = "Memcached";
+        else if (b.includes("elasticsearch") || b.includes("\"cluster_name\"")) service = "Elasticsearch";
+        else if (b.includes("rabbitmq") || b.includes("amqp")) service = "RabbitMQ";
+        else if (b.includes("mongodb")) service = "MongoDB";
+      }
+
+      // Nothing sensitive positively identified -> not an actionable exposure.
+      if (!service) {
+        return;
       }
 
       var result = {
@@ -96,7 +148,7 @@ javascript:
       - type: dsl
         dsl:
           - 'len(response) > 0'
-    
+
     extractors:
       - type: dsl
         dsl:
