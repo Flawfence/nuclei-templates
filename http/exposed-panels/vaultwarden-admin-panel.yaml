@@ -1,0 +1,33 @@
+id: vaultwarden-admin-panel
+
+info:
+  name: Vaultwarden Admin Panel - Exposed
+  author: Flawfence
+  severity: low
+  description: |
+    The Vaultwarden administration panel (/admin) is reachable over the internet.
+    Access is gated by the ADMIN_TOKEN, but exposing the admin interface widens the
+    attack surface (token brute-force or theft, and any future authentication
+    bypass) and it should be restricted to a trusted network or disabled.
+  reference:
+    - https://github.com/dani-garcia/vaultwarden/wiki/Enabling-admin-page
+    - https://github.com/dani-garcia/vaultwarden
+  classification:
+    cwe-id: CWE-749
+  metadata:
+    max-request: 1
+    verified: true
+    shodan-query: http.html:"vaultwarden"
+  tags: panel,vaultwarden,admin,exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code == 200'
+          - 'contains(to_lower(body), "vaultwarden admin panel</title>")'
+        condition: and
