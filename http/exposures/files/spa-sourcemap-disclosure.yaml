@@ -1,0 +1,62 @@
+id: spa-sourcemap-disclosure
+
+info:
+  name: SPA JavaScript Source Map Disclosure
+  author: Flawfence
+  severity: info
+  description: |
+    A single-page-application JavaScript bundle referenced from the HTML shell has
+    its source map (<bundle>.js.map) publicly served. The .js.map file embeds the
+    original JavaScript/TypeScript/Vue source via sourcesContent, disclosing
+    application internals: routes, API endpoints, authentication flow, developer
+    comments and occasionally secrets. This complements webpack-sourcemap-disclosure,
+    which resolves the map from a sourceMappingURL present in the HTML itself;
+    SPA shells reference the map from the bundle, not the HTML.
+  reference:
+    - https://webpack.js.org/configuration/devtool/
+    - https://cwe.mitre.org/data/definitions/540.html
+  classification:
+    cwe-id: CWE-540
+  metadata:
+    max-request: 2
+    verified: true
+  tags: exposure,files,sourcemap,js
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    extractors:
+      - type: regex
+        name: jsbundle
+        internal: true
+        group: 1
+        regex:
+          - 'src=["\x27]?(/[a-zA-Z0-9_./-]+\.js)\b'
+
+  - method: GET
+    path:
+      - "{{RootURL}}{{jsbundle}}.map"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"version":'
+          - '"sources":'
+          - '"sourcesContent":'
+        condition: and
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        name: disclosed_source
+        group: 1
+        regex:
+          - '"(webpack:///[^"]{4,100})"'
