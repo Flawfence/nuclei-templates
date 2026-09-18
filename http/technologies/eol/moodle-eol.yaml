@@ -1,0 +1,52 @@
+id: moodle-eol
+
+info:
+  name: Moodle End-of-Life - Detect
+  author: trackflaw
+  severity: info
+  description: |
+    Detected Moodle versions that have reached End-of-Life (EOL) and no longer receive security updates. The installed release is read from the publicly readable lib/upgrade.txt developer changelog, whose newest "=== X.Y ===" entry corresponds to the running branch. Any branch older than the current 4.5 LTS is unsupported.
+  impact: |
+    Unsupported Moodle releases no longer receive security advisories or patches, so newly disclosed vulnerabilities (RCE, SQLi, stored XSS, LFI, CSRF) remain permanently exploitable.
+  remediation: |
+    Upgrade to a Moodle release still covered by security support, as published in the Moodle release cycle policy.
+  reference:
+    - https://endoflife.date/moodle
+    - https://moodledev.io/general/releases
+    - https://docs.moodle.org/dev/Releases
+  classification:
+    cwe-id: CWE-1104
+  metadata:
+    verified: true
+    max-request: 1
+    product: moodle
+    vendor: moodle
+    shodan-query: http.component:"Moodle"
+  tags: tech,moodle,eol
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/lib/upgrade.txt"
+
+    host-redirects: true
+    max-redirects: 2
+
+    extractors:
+      - type: regex
+        part: body
+        name: version
+        group: 1
+        regex:
+          - '(?s)^.*?===\s*([0-9]+\.[0-9]+(?:\.[0-9]+)?)\s*==='
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "This files describes API changes"
+
+      - type: dsl
+        dsl:
+          - "compare_versions(version, '<4.5')"
