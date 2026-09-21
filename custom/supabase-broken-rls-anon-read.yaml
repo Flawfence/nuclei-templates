@@ -1,0 +1,119 @@
+id: supabase-broken-rls-anon-read
+
+info:
+  name: Supabase Broken RLS - Unauthenticated Data Read via Public Anon Key
+  author: Flawfence
+  severity: critical
+  description: |
+    A web application (typically Lovable / Vite / Nuxt generated) embeds its
+    Supabase project URL and public "anon" API key in client-side JavaScript.
+    Because Row Level Security (RLS) is disabled or misconfigured, the public
+    anon key can read sensitive tables without any authentication.
+    The template extracts the Supabase URL and anon key from the app bundle,
+    then proves anonymous read access on common sensitive tables using a
+    zero-data-exfiltration probe: `select=*&limit=0` with `Prefer: count=exact`.
+    A readable table returns HTTP 200/206 with an empty body `[]` and a
+    `Content-Range: */N` header where N > 0 (rows exist and are anon-readable),
+    while a protected table returns 401/403 and a missing table returns 404.
+  reference:
+    - https://supabase.com/docs/guides/database/postgres/row-level-security
+    - https://supabase.com/docs/guides/api/securing-your-api
+    - https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/
+  classification:
+    cwe-id: CWE-284
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+    cvss-score: 9.8
+  metadata:
+    max-request: 3
+    vendor: supabase
+    product: supabase
+  tags: misconfig,supabase,rls,unauth,exposure,postgrest,idor,flawfence
+
+variables:
+  jspath: ""
+  supabaseurl: ""
+  anonkey: ""
+
+flow: http(1) && http(2) && http(3)
+
+http:
+  # 1) locate the application JS bundle that carries the Supabase config
+  - id: bundle
+    method: GET
+    path:
+      - "{{BaseURL}}"
+    extractors:
+      - type: regex
+        name: jspath
+        internal: true
+        part: body
+        regex:
+          - '/assets/index-[A-Za-z0-9_.\-]+\.js'
+          - '/(?:assets|_nuxt|js|static)/[A-Za-z0-9_.\-]+\.js'
+
+  # 2) pull the Supabase URL and the public anon key out of the bundle
+  - id: creds
+    method: GET
+    path:
+      - "{{BaseURL}}{{jspath}}"
+    extractors:
+      - type: regex
+        name: supabaseurl
+        internal: true
+        part: body
+        regex:
+          - 'https://[a-z0-9]+\.supabase\.co'
+      - type: regex
+        name: anonkey
+        internal: true
+        part: body
+        regex:
+          - 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}'
+
+  # 3) prove anonymous read on sensitive tables (no data is returned: limit=0)
+  - id: probe
+    method: GET
+    path:
+      - "{{supabaseurl}}/rest/v1/{{table}}?select=*&limit=0"
+    headers:
+      apikey: "{{anonkey}}"
+      Authorization: "Bearer {{anonkey}}"
+      Prefer: "count=exact"
+    payloads:
+      table:
+        - app_users
+        - users
+        - profiles
+        - accounts
+        - comptes
+        - admins
+        - admin_users
+        - members
+        - clients
+        - customers
+        - contacts
+        - demandes
+        - requests
+        - rgpd_partenaires
+        - partenaires
+        - orders
+        - payments
+        - user_activity_logs
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 206
+      - type: regex
+        part: header
+        regex:
+          - '(?i)content-range:\s*\*/[1-9][0-9]*'
+    extractors:
+      - type: regex
+        part: header
+        name: readable_table_rows
+        group: 1
+        regex:
+          - '(?i)content-range:\s*\*/([0-9]+)'
