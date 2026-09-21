@@ -1,0 +1,98 @@
+id: wordpress-legacy-revslider-outdated
+
+info:
+  name: WordPress Legacy Stack - Outdated Core and/or Slider Revolution (EOL)
+  author: Flawfence
+  severity: medium
+  description: |
+    Detects a legacy / end-of-life WordPress installation by fingerprinting two
+    signals that are commonly left publicly readable:
+      1. the core version disclosed by the RSS feed generator tag (`/feed/`),
+         flagged when older than 6.0;
+      2. the bundled Slider Revolution (RevSlider) plugin version disclosed in
+         its public JavaScript asset, flagged when older than 6.0 (older
+         RevSlider branches carry well-known file upload / LFI issues).
+    Either signal alone marks an unmaintained stack (usually paired with an EOL
+    PHP release) that should be decommissioned or upgraded.
+  reference:
+    - https://wordpress.org/download/releases/
+    - https://www.wordfence.com/threat-intel/vulnerabilities/wordpress-plugins/revslider
+    - https://owasp.org/www-project-top-ten/2021/A06_2021-Vulnerable_and_Outdated_Components
+  classification:
+    cwe-id: CWE-1104
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+  metadata:
+    max-request: 2
+    vendor: wordpress
+    product: wordpress
+  tags: wordpress,revslider,revolution-slider,outdated,eol,version,flawfence
+
+http:
+  # 1) WordPress core version via the RSS feed generator tag
+  - method: GET
+    path:
+      - "{{BaseURL}}/feed/"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "wordpress.org/?v="
+      - type: dsl
+        dsl:
+          - "compare_versions(wpversion, '< 6.0')"
+
+    extractors:
+      - type: regex
+        name: wpversion
+        part: body
+        group: 1
+        internal: true
+        regex:
+          - 'wordpress\.org/\?v=([0-9]+\.[0-9]+(?:\.[0-9]+)?)'
+      - type: regex
+        name: wordpress_version
+        part: body
+        group: 1
+        regex:
+          - 'wordpress\.org/\?v=([0-9.]+)'
+
+  # 2) Slider Revolution version via its public JS asset
+  - method: GET
+    path:
+      - "{{BaseURL}}/wp-content/plugins/revslider/public/assets/js/jquery.themepunch.revolution.min.js"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "themepunch"
+          - "revolution"
+        condition: and
+      - type: dsl
+        dsl:
+          - "compare_versions(rsversion, '< 6.0')"
+
+    extractors:
+      - type: regex
+        name: rsversion
+        part: body
+        group: 1
+        internal: true
+        regex:
+          - '@version:\s*([0-9]+\.[0-9]+(?:\.[0-9]+)?)'
+      - type: regex
+        name: revslider_version
+        part: body
+        group: 1
+        regex:
+          - '@version:\s*([0-9.]+)'

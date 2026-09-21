@@ -1,0 +1,59 @@
+id: prestashop-outdated-changelog
+
+info:
+  name: PrestaShop - Outdated / EOL Version via Public CHANGELOG
+  author: Flawfence
+  severity: medium
+  description: |
+    The PrestaShop `/docs/CHANGELOG.txt` file is publicly readable and discloses
+    the exact shop version. When that version is an unsupported / end-of-life
+    branch (older than 1.7.8), the shop is exposed to multiple publicly known
+    vulnerabilities (e.g. SQL injection CVE-2020-15160, XXE CVE-2020-15161) and
+    typically runs an EOL PHP release. The public CHANGELOG is itself an
+    information disclosure that eases version-based targeting.
+  reference:
+    - https://build.prestashop-project.org/news/
+    - https://security.snyk.io/package/composer/prestashop%2Fprestashop
+    - https://owasp.org/www-project-top-ten/2021/A06_2021-Vulnerable_and_Outdated_Components
+  classification:
+    cwe-id: CWE-1104
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+  metadata:
+    max-request: 1
+    vendor: prestashop
+    product: prestashop
+  tags: prestashop,exposure,version,eol,outdated,misconfig,flawfence
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/docs/CHANGELOG.txt"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "PrestaShop"
+      - type: dsl
+        dsl:
+          - "compare_versions(version, '< 1.7.8')"
+
+    extractors:
+      - type: regex
+        name: version
+        part: body
+        group: 1
+        internal: true
+        regex:
+          - 'v([0-9]+\.[0-9]+\.[0-9]+)'
+      - type: regex
+        name: prestashop_version
+        part: body
+        group: 1
+        regex:
+          - 'v([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?) - \('
