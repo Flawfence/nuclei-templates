@@ -1,0 +1,44 @@
+id: dotnet-source-path-disclosure
+
+info:
+  name: .NET Stack Trace - Source File Path Disclosure
+  author: Flawfence
+  severity: low
+  description: |
+    A .NET application returned an unhandled-exception stack trace that includes the
+    absolute build-time source file path and line number of a stack frame - for
+    example "at App.Foo() in C:\Projets\...\UsersManagement.cs:line 239". This is the
+    canonical ".../<File>.(cs|vb):line <n>" frame emitted by .NET / ASP.NET / WCF when
+    detailed errors are exposed. It leaks the internal build directory layout, project
+    and namespace names and the source-control structure, which aids an attacker in
+    mapping the application internals. Commonly seen together with customErrors="Off"
+    or debug="true".
+  reference:
+    - https://cwe.mitre.org/data/definitions/209.html
+    - https://learn.microsoft.com/en-us/aspnet/web-forms/overview/getting-started/getting-started-with-aspnet-45-web-forms/aspnet-error-handling
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-209
+  metadata:
+    max-request: 1
+  tags: exposure,disclosure,dotnet,aspnet,wcf,info-leak,stacktrace
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers:
+      - type: regex
+        part: body
+        name: source-path-frame
+        regex:
+          - '(?i)\bin\s+[a-z]:\\[^\r\n<"]+\.(?:cs|vb):line\s+\d+'
+
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex:
+          - '(?i)in\s+([a-z]:\\[^\r\n<"]+\.(?:cs|vb):line\s+\d+)'
