@@ -1,0 +1,41 @@
+id: crushftp-detect
+
+info:
+  name: CrushFTP - Detect
+  author: Flawfence
+  severity: info
+  description: |
+    CrushFTP file transfer server was detected via the HTTP response Server header.
+    CrushFTP has been affected by several pre-authentication vulnerabilities
+    (CVE-2024-4040, CVE-2025-31161), so exposed instances should be inventoried and
+    kept up to date.
+  reference:
+    - https://www.crushftp.com/
+    - https://nvd.nist.gov/vuln/detail/CVE-2024-4040
+  classification:
+    cpe: cpe:2.3:a:crushftp:crushftp:*:*:*:*:*:*:*:*
+  metadata:
+    verified: true
+    max-request: 1
+    vendor: crushftp
+    product: crushftp
+    shodan-query: 'Server: "CrushFTP HTTP Server"'
+  tags: tech,crushftp,ftp,discovery
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "CrushFTP HTTP Server"
+
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex:
+          - 'Server:\s*(CrushFTP[^\r\n]+)'

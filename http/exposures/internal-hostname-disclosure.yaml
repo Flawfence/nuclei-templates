@@ -1,0 +1,48 @@
+id: internal-hostname-disclosure
+
+info:
+  name: Internal Hostname / AD FQDN Disclosure
+  author: Flawfence
+  severity: low
+  description: |
+    The application discloses an internal, non-public host name - for example an
+    Active Directory / corporate FQDN (such as HOST.EMEA.EXAMPLE.GRP) or an internal
+    zone ending in .local/.corp/.internal/.intranet/.lan - inside a redirect Location
+    header or the response body. Leaking internal host names reveals network topology
+    and assists an attacker with lateral movement and social engineering.
+  reference:
+    - https://cwe.mitre.org/data/definitions/200.html
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+    cwe-id: CWE-200
+  metadata:
+    max-request: 1
+  tags: exposure,disclosure,misconfig,info-leak
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: header
+        name: internal-fqdn-redirect
+        regex:
+          - '(?i)location:\s*https?://[a-z0-9._-]+\.(?:grp|local|corp|internal|intranet|lan)[/:\r\n]'
+          - '(?i)location:\s*https?://[a-z0-9._-]+\.(?:emea|apac|amer)\.[a-z0-9._-]+'
+
+      - type: regex
+        part: body
+        name: internal-fqdn-body
+        regex:
+          - '(?i)\bhttps?://[a-z0-9._-]+\.(?:grp|local|corp|internal|intranet|lan)[/"'']'
+
+    extractors:
+      - type: regex
+        part: response
+        regex:
+          - '(?i)[a-z0-9_-]+\.(?:emea|apac|amer)\.[a-z0-9._-]*\.(?:grp|local|corp|internal|intranet|lan|com|net)'
+          - '(?i)https?://[a-z0-9._-]+\.(?:grp|local|corp|internal|intranet|lan)'
