@@ -5,10 +5,10 @@ info:
   author: Flawfence
   severity: info
   description: |
-    3CX Phone System Web Client was detected. This complements
-    3cx-phone-webclient-management-panel by also matching deployments that serve the
-    web client at the web root (for example behind an nginx reverse proxy) rather than
-    under /webclient/.
+    3CX Phone System Web Client was detected at the web root. This complements
+    3cx-phone-webclient-management-panel (which only probes /webclient/) by matching
+    deployments that serve the client at / - for example behind an nginx reverse proxy
+    - which the /webclient/ path check misses.
   reference:
     - https://www.3cx.com/phone-system/
     - https://www.3cx.com/blog/unified-communications/client-apps/
@@ -16,7 +16,7 @@ info:
     cpe: cpe:2.3:a:3cx:3cx:*:*:*:*:*:*:*:*
   metadata:
     verified: true
-    max-request: 2
+    max-request: 1
     vendor: 3cx
     product: 3cx
     shodan-query: 'http.title:"3CX Webclient"'
@@ -26,9 +26,6 @@ http:
   - method: GET
     path:
       - "{{BaseURL}}/"
-      - "{{BaseURL}}/webclient/"
-
-    stop-at-first-match: true
 
     matchers-condition: or
     matchers:

@@ -27,22 +27,22 @@ http:
 
     matchers-condition: or
     matchers:
+      # Redirect to an internal-only DNS suffix (never a public TLD -> low FP).
       - type: regex
         part: header
         name: internal-fqdn-redirect
         regex:
-          - '(?i)location:\s*https?://[a-z0-9._-]+\.(?:grp|local|corp|internal|intranet|lan)[/:\r\n]'
-          - '(?i)location:\s*https?://[a-z0-9._-]+\.(?:emea|apac|amer)\.[a-z0-9._-]+'
+          - '(?i)location:\s*https?://[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:grp|local|corp|internal|intranet|lan)(?::\d+)?[/\s]'
 
+      # Same internal-only suffix leaked anywhere in the body.
       - type: regex
         part: body
         name: internal-fqdn-body
         regex:
-          - '(?i)\bhttps?://[a-z0-9._-]+\.(?:grp|local|corp|internal|intranet|lan)[/"'']'
+          - '(?i)https?://[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:grp|local|corp|internal|intranet|lan)(?::\d+)?[/"'']'
 
     extractors:
       - type: regex
         part: response
         regex:
-          - '(?i)[a-z0-9_-]+\.(?:emea|apac|amer)\.[a-z0-9._-]*\.(?:grp|local|corp|internal|intranet|lan|com|net)'
-          - '(?i)https?://[a-z0-9._-]+\.(?:grp|local|corp|internal|intranet|lan)'
+          - '(?i)[a-z0-9-]+(?:\.[a-z0-9-]+)+\.(?:grp|local|corp|internal|intranet|lan)\b'

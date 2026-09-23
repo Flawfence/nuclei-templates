@@ -49,3 +49,9 @@ http:
       - type: status
         status:
           - 401
+
+    extractors:
+      - type: kval
+        part: header
+        kval:
+          - www_authenticate
