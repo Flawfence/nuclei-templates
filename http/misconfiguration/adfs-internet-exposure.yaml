@@ -1,0 +1,54 @@
+id: adfs-internet-exposure
+
+info:
+  name: Microsoft ADFS Endpoints Exposed to the Internet
+  author: Flawfence
+  severity: medium
+  description: |
+    Detects a Microsoft Active Directory Federation Services (ADFS) deployment exposed to the
+    public Internet by probing its unauthenticated metadata endpoints (OpenID configuration and
+    FederationMetadata). An Internet-exposed ADFS presents a direct Active Directory
+    password-spray / credential-evaluation surface and should normally be reachable only
+    internally or behind conditional access. Detection only; no credential submission is made.
+  impact: |
+    Exposed WS-Trust/forms endpoints evaluate Active Directory credentials pre-authentication,
+    enabling password spraying and (for windowstransport) NTLM relay against the corporate
+    directory, which can cascade into SSO across the estate.
+  remediation: |
+    Place ADFS behind Web Application Proxy with Extranet Smart Lockout, disable unneeded
+    WS-Trust bindings (windowstransport/usernamemixed) on the extranet, enforce MFA/conditional
+    access, and do not expose ADFS metadata to the full Internet.
+  reference:
+    - https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/operations/configure-ad-fs-extranet-smart-lockout-protection
+    - https://owasp.org/www-community/attacks/Credential_stuffing
+  classification:
+    cwe-id: CWE-285
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+    cvss-score: 5.3
+  metadata:
+    max-request: 2
+  tags: exposure,adfs,microsoft,sso,ntlm,flawfence
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/adfs/.well-known/openid-configuration"
+      - "{{BaseURL}}/FederationMetadata/2007-06/FederationMetadata.xml"
+
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: dsl
+        # bind the match to ADFS specifically (path + content), not any generic OIDC/SAML doc
+        dsl:
+          - 'contains(body, "/adfs/") || contains(tolower(body), "adfs") || contains(body, "http://schemas.xmlsoap.org/ws/2005/02/trust")'
+      - type: word
+        part: body
+        words:
+          - "token_endpoint"
+          - "EntityDescriptor"
+          - "RoleDescriptor"
+        condition: or

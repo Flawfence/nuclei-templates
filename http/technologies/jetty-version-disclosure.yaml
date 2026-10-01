@@ -1,0 +1,38 @@
+id: jetty-version-disclosure
+
+info:
+  name: Eclipse Jetty Version Disclosure
+  author: Flawfence
+  severity: info
+  description: |
+    Extracts the Eclipse Jetty version advertised in the Server response header. Old branches
+    (for example 9.2.x from 2018) are end-of-life and carry known CVEs; the version banner also
+    aids fingerprinting.
+  remediation: |
+    Suppress the Server header (HttpConfiguration sendServerVersion=false) and upgrade off
+    end-of-life Jetty branches.
+  reference:
+    - https://www.eclipse.org/jetty/
+  classification:
+    cwe-id: CWE-200
+  metadata:
+    max-request: 1
+  tags: tech,jetty,version,eol,flawfence
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?i)Server:\\s*Jetty\\(([0-9][0-9.v]+)\\)"
+
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex:
+          - "(?i)Jetty\\(([0-9][0-9.v]+)\\)"

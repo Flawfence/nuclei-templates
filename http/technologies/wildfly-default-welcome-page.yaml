@@ -1,0 +1,45 @@
+id: wildfly-default-welcome-page
+
+info:
+  name: WildFly/JBoss Default Welcome Page Exposed
+  author: Flawfence
+  severity: low
+  description: |
+    Detects the default "Welcome to WildFly" (or legacy JBoss AS/EAP) landing page served at
+    the web root. Its presence indicates an unconfigured ROOT context and often an end-of-life
+    application server (e.g. WildFly 10) exposed to the network, disclosing the product and,
+    on some builds, the version.
+  remediation: |
+    Remove or replace the default ROOT welcome application, upgrade off end-of-life
+    WildFly/JBoss branches, and restrict management console exposure.
+  reference:
+    - https://www.wildfly.org/
+  classification:
+    cwe-id: CWE-200
+  metadata:
+    max-request: 1
+  tags: exposure,wildfly,jboss,eol,default-page,flawfence
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Welcome to WildFly"
+          - "Welcome to JBoss"
+        condition: or
+
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex:
+          - "Welcome to (WildFly[0-9 .]*|JBoss[A-Za-z0-9 .]*)"

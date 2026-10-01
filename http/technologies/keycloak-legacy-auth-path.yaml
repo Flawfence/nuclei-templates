@@ -1,0 +1,37 @@
+id: keycloak-legacy-auth-path
+
+info:
+  name: Legacy Keycloak (/auth Base Path, WildFly <= v16) Exposed
+  author: Flawfence
+  severity: low
+  description: |
+    Detects a legacy Keycloak deployment serving under the /auth base path. The /auth prefix
+    was the default only on the WildFly-based distribution (Keycloak <= 16, removed by default
+    from Keycloak 17+/Quarkus). That branch is end-of-life (16.x dates to 2021) and carries a
+    large legacy CVE surface.
+  remediation: |
+    Migrate to a supported Quarkus-based Keycloak and drop the /auth legacy base path; never
+    expose the legacy admin console to the Internet.
+  reference:
+    - https://www.keycloak.org/2022/02/release-highlights-17-0-0
+  classification:
+    cwe-id: CWE-1104
+  metadata:
+    max-request: 2
+  tags: exposure,keycloak,legacy,eol,sso,flawfence
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/auth/js/keycloak.js"
+      - "{{BaseURL}}/auth/realms/master/.well-known/openid-configuration"
+
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: dsl
+        dsl:
+          - 'contains(body, "Keycloak") || contains(tolower(body), "keycloak") || contains(body, "/auth/realms/")'

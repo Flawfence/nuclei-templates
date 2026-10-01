@@ -1,0 +1,48 @@
+id: nextcloud-eol-version
+
+info:
+  name: Nextcloud End-of-Life Version Exposed
+  author: Flawfence
+  severity: medium
+  description: |
+    Reads the unauthenticated /status.php endpoint of a Nextcloud server, extracts the version,
+    and flags server-major branches that have reached end-of-life (major <= 30 as of 2026-10),
+    which no longer receive security fixes. Exposing an end-of-life file-sharing platform
+    (especially one handling sensitive or health data) leaves any future Nextcloud 1-day
+    unpatchable.
+  remediation: |
+    Upgrade to a currently supported Nextcloud branch and keep it patched; restrict public
+    exposure of the file-sharing service (ZTNA/allowlist).
+  reference:
+    - https://github.com/nextcloud/server/wiki/Maintenance-and-Release-Schedule
+  classification:
+    cwe-id: CWE-1104
+  metadata:
+    max-request: 1
+  tags: exposure,nextcloud,eol,version,flawfence
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/status.php"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "versionstring"
+          - "installed"
+        condition: and
+      - type: regex
+        part: body
+        # major branch 1-30 = end-of-life as of 2026-10 (31+ still supported)
+        regex:
+          - '"versionstring":"(?:[1-9]|[12][0-9]|30)\.'
+
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex:
+          - '"versionstring":"([0-9.]+)"'
