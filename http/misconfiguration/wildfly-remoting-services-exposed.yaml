@@ -1,0 +1,35 @@
+id: wildfly-remoting-services-exposed
+
+info:
+  name: WildFly HTTP Remoting Services (/wildfly-services) - Exposed
+  author: flawfence
+  severity: medium
+  description: |
+    The WildFly/JBoss http-remoting and http-invoker endpoint (/wildfly-services) is reachable from the public Internet. A HEAD request returns the native WWW-Authenticate Digest realm="ApplicationRealm" challenge of the WildFly remoting connector, exposing the EJB-over-HTTP invocation, JNDI and management-over-HTTP-upgrade surface (a credential-attack surface against ApplicationRealm and a Java deserialization surface). The endpoint is authentication-gated on every method, so this is an exposure of the remoting surface rather than an unauthenticated bypass.
+  remediation: Do not expose the http-remoting / http-invoker connector to untrusted networks; bind it to an internal interface or place it behind a VPN/ZTNA, keep WildFly on a supported release, and remove default ApplicationRealm accounts.
+  reference:
+    - https://docs.wildfly.org/
+    - https://nvd.nist.gov/vuln/detail/CVE-2017-12149
+  classification:
+    cwe-id: CWE-200
+  metadata:
+    verified: true
+    max-request: 1
+  tags: wildfly,jboss,remoting,misconfig,exposure,ejb
+
+http:
+  - raw:
+      - |
+        HEAD /wildfly-services/ HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 401
+
+      - type: word
+        part: header
+        words:
+          - 'realm="ApplicationRealm"'
