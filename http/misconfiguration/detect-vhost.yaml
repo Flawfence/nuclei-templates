@@ -5,14 +5,28 @@ info:
   author: Flawfence
   severity: low
   description: |
-    Detects virtual hosts using a wordlist and extracts significant vhosts whose
-    response differs meaningfully from the base host (content-length ratio outside
-    0.95-1.05). For each candidate it checks DNS: if the vhost has no A record but
-    is still reachable over HTTP, it is reported as an undeclared/misconfigured vhost.
+    Detects virtual hosts using a wordlist and reports only candidates whose
+    response is materially different from the server's catch-all / default
+    behaviour.
+
+    Calibration is performed against a RANDOM, non-existent vhost (not the base
+    host): this captures how the server answers an unknown Host header. Many
+    servers are catch-alls that return the same page for every Host (often a 302
+    that reflects the requested hostname in the body), so a candidate is only
+    significant when it differs from that baseline. Before comparing body sizes
+    the requested FQDN is stripped from both bodies, so a server that merely
+    echoes the Host header is not mistaken for a distinct application.
+
+    For each significant candidate it then checks DNS: if the vhost has no A
+    record but is still reachable over HTTP, it is reported as an
+    undeclared/misconfigured vhost.
 
     Example:
       curl -s -H "Host: vhost.example.com" http://example.com/
   tags: vhost,http,misconfig
+
+variables:
+  randhost: "{{rand_text_alphanumeric(16)}}"
 
 flow: |
   http("calibration");
@@ -23,6 +37,10 @@ http:
     method: GET
     path:
       - "{{BaseURL}}"
+    headers:
+      # A random, non-existent vhost: the response is the server's catch-all /
+      # default answer, which is the correct baseline for vhost discovery.
+      Host: "{{randhost}}.{{Host}}"
 
     matchers:
       - type: dsl
@@ -31,12 +49,19 @@ http:
         internal: true
 
     extractors:
-      - type: regex
-        name: content_length
-        part: header
-        regex:
-          - "Content-Length: (\\d+)"
+      - type: dsl
+        name: base_status
         internal: true
+        dsl:
+          - "status_code"
+
+      # Body length of the catch-all response with its own FQDN removed, so that
+      # a Host-reflecting server yields the same normalised length for every Host.
+      - type: dsl
+        name: base_norm_len
+        internal: true
+        dsl:
+          - "len(replace(body, randhost + '.' + Host, ''))"
 
   - id: vhost_request
     method: GET
@@ -46,9 +71,7 @@ http:
       Host: "{{vhost}}.{{Host}}"
 
     # The wordlist is loaded as a payload and iterated with battering-ram, so a
-    # single http("vhost_request") call from the flow probes every entry. The
-    # previous version read `variables.wordlist` (the literal path string), which
-    # produced a single bogus vhost named after the wordlist file path.
+    # single http("vhost_request") call from the flow probes every entry.
     payloads:
       vhost: helpers/wordlists/vhost.txt
     attack: batteringram
@@ -56,19 +79,22 @@ http:
     matchers-condition: and
     matchers:
       - type: status
-        name: valid_status
+        name: reachable
         status:
           - 200
           - 302
         internal: true
 
-      # Response must differ meaningfully from the base host (>5% size delta),
-      # otherwise it is just the default vhost answering and not significant.
+      # Significant only when the candidate truly differs from the catch-all
+      # baseline: either a different status code, or a normalised body size
+      # (FQDN stripped) that differs by more than 64 bytes. A catch-all that
+      # just reflects the Host normalises to the same size here and is dropped,
+      # which is what previously caused globalocs.telefonica.com false positives.
       - type: dsl
-        name: significant_length
-        dsl:
-          - "(len(body) / to_number(calibration_content_length)) > 1.05 || (len(body) / to_number(calibration_content_length)) < 0.95"
+        name: differs_from_catchall
         internal: true
+        dsl:
+          - "status_code != to_number(base_status) || (len(replace(body, vhost + '.' + Host, '')) - to_number(base_norm_len)) > 64 || (to_number(base_norm_len) - len(replace(body, vhost + '.' + Host, ''))) > 64"
 
       # Report only vhosts that do NOT resolve to an A record: resolve() returns
       # the address for a real host (matcher true -> negated to false -> dropped),
@@ -82,4 +108,4 @@ http:
     extractors:
       - type: dsl
         dsl:
-          - "'The vhost ' + vhost + '.' + Host + ' has no A record but is reachable via HTTP'"
+          - "'The vhost ' + vhost + '.' + Host + ' responds differently from the catch-all baseline and has no A record but is reachable via HTTP'"
