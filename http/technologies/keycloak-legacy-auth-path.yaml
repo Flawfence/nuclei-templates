@@ -32,6 +32,20 @@ http:
       - type: status
         status:
           - 200
+
+      # keycloak.js is served as JavaScript and the discovery document as JSON.
+      # A catch-all host answers every path with text/html, so the content-type
+      # alone rejects a reflected sign-in page served under /auth/js/keycloak.js.
+      - type: word
+        part: header
+        words:
+          - "javascript"
+          - "application/json"
+        condition: or
+
+      # Structural tokens from the real adapter / discovery document. The old
+      # matcher accepted a bare "keycloak", which the requested path itself
+      # supplies once reflected into the body; these cannot be produced that way.
       - type: dsl
         dsl:
-          - 'contains(body, "Keycloak") || contains(tolower(body), "keycloak") || contains(body, "/auth/realms/")'
+          - 'contains(body, "window.Keycloak") || contains(body, "createNativeAdapter") || contains(body, "openid-connect") || contains(body, "\"authorization_endpoint\"")'
