@@ -979,8 +979,8 @@ code/windows/enumeration/unquoted-service-paths.yaml:2663d300b15940f45ad54d0e731
 code/windows/enumeration/weak-service-binary-permissions.yaml:8780198c798f69ccf2a8ae801d53f558f1909e8c
 code/windows/get-stored-credentials-cmdkey.yaml:0355b4ae1b0a1fdac60cea737538510bdebe6382
 contributors.json:2f5b14e6c7656a7e0ba252b98f92df058186148b
-cves.json:9b3d1b4195c988d0a403388cc00fb35129fb72f6
-cves.json-checksum.txt:8250be284aaca2129aad1ee7141b6f13ebf2a014
+cves.json:81313b702ad2bac8d8099456d71739db7ee7ce63
+cves.json-checksum.txt:86d0ce064b3cc2c6cf5e322d2aecaa142197a5a0
 dast/ai/ai-code-execution.yaml:22499b9349751bc0841e3c87a9ad36f17d98c565
 dast/ai/ai-data-exfiltration.yaml:7c3b8514ff64b5ba6737ee77bf3c71a074e9540c
 dast/ai/ai-prompt-injection.yaml:509eeec9e6458911087a2f93e2358a4b5e285429
@@ -6070,6 +6070,7 @@ http/cves/2026/CVE-2026-116167.yaml:6e927557f9a3dbb0b02c1baab14c7c140ab54fca
 http/cves/2026/CVE-2026-116205.yaml:27595a541a9431f61f5292f89045c2b1b012fc7b
 http/cves/2026/CVE-2026-116366.yaml:2104c67edcf5662cb6c06854eb230ab83e82d5cf
 http/cves/2026/CVE-2026-116485.yaml:2540ed7a2054eddc86fb76d8d302def9ed70ff93
+http/cves/2026/CVE-2026-116690.yaml:1ac614eef4529000beb735db17837b2a0114fc00
 http/cves/2026/CVE-2026-116748.yaml:8ba1c8d573acbaeb00fe04e12ac4a1c00826caf3
 http/cves/2026/CVE-2026-11801.yaml:f1a10cedf7d31f70a2ecb8f1175d14b263c40039
 http/cves/2026/CVE-2026-1207.yaml:eba013576d1a803c5b87f7c6c6705fb37fc36150
@@ -6082,6 +6083,7 @@ http/cves/2026/CVE-2026-12800.yaml:0c5732c29ff089eb0d7dc01764a438db4d7fa2a4
 http/cves/2026/CVE-2026-1281.yaml:2a3c328831ad69914c9d69e38b283e27d7afe2c7
 http/cves/2026/CVE-2026-12898.yaml:07ec9841a623b4820e48b950cda8ab8958f3b37f
 http/cves/2026/CVE-2026-1296.yaml:74e58e3632239b4d043212691f9e45e66afa71f6
+http/cves/2026/CVE-2026-12970.yaml:3bd9bc7e51a12f568fed5138a71be7aa6688a823
 http/cves/2026/CVE-2026-13001.yaml:b351cda4c0f5c897ef22afd8885e2651f42dc880
 http/cves/2026/CVE-2026-1306.yaml:35e98fb542fd83e20a0bcd6257336e1f63ba96d8
 http/cves/2026/CVE-2026-1314.yaml:54909110af4bc4f0c8f638363e38e77aaf9dcde0
@@ -6374,6 +6376,7 @@ http/cves/2026/CVE-2026-52774.yaml:be1cfa7352155ea67a66777bed3adb084600d533
 http/cves/2026/CVE-2026-52806.yaml:71af188344c5ef7b9e96c7101c4a43e0c7d255e4
 http/cves/2026/CVE-2026-52815.yaml:ba37bad26214d1c787b3f4d3374e9401d260230e
 http/cves/2026/CVE-2026-52824.yaml:78d5b096b692431c25e98a0b9191e91daebc64e5
+http/cves/2026/CVE-2026-53468.yaml:2e6685ec0f3449cd815a40d97cf3cfab557c74d6
 http/cves/2026/CVE-2026-53519.yaml:990780b31e083053f0454ccf69ef87451f00bd87
 http/cves/2026/CVE-2026-53576.yaml:1db4cb0fdac1267c5d9609e690730acfd57452d0
 http/cves/2026/CVE-2026-53595.yaml:49a75a9ab1b2e683e7096928cdd219a21450ac90
@@ -6469,6 +6472,7 @@ http/cves/2026/CVE-2026-76460.yaml:48108b0bc8738f1be309db865df6b6efee083484
 http/cves/2026/CVE-2026-76904.yaml:7158dfc45e5609b689456291601991adcf78eb87
 http/cves/2026/CVE-2026-77806.yaml:7d859a75e9da6361e23ec24ed959ac56b335f2f2
 http/cves/2026/CVE-2026-7798.yaml:54d14194f97043677859eef9c486dc9cc8689b05
+http/cves/2026/CVE-2026-7873.yaml:076b73a7ed8c2333c7c3f06d8cb26203d5954658
 http/cves/2026/CVE-2026-80099.yaml:f931e4d3a48893bbf364e1fb993b52962305911d
 http/cves/2026/CVE-2026-8037.yaml:371e19ea3a934f7132707094c1702ba6f8fa1f1b
 http/cves/2026/CVE-2026-80462.yaml:258a32cb88397a72ec8357bd9c182c580db1efba
@@ -6589,6 +6593,7 @@ http/default-logins/bigant/bigant-default-login.yaml:57c06ac51bce262b9b4454cf984
 http/default-logins/bloofoxcms-default-login.yaml:74d1e13966f3ac07dffd7169845c48d1a33193fc
 http/default-logins/bonita/bonita-default-login.yaml:ac59e531a773ce8224fffdbdd811a5ada3e7edab
 http/default-logins/brickcom-camera-default-login.yaml:f200af8073b0aab4a02e7c7e3e46dc3bc4fd5163
+http/default-logins/bwapp/bwapp-default-login.yaml:94e9b558eda63cd217e07402a5da73069be6214d
 http/default-logins/caimore/caimore-default-login.yaml:602f369d731824bc4a1225d0f4d74640252d6210
 http/default-logins/caldera/caldera-default-login.yaml:3d41a6806aea21089f4b53315da4168583f09f64
 http/default-logins/camaleon/camaleon-default-login.yaml:8d57fbbf6fd3a7da1f51867da124bbb7510cd5dc
@@ -7091,7 +7096,7 @@ http/exposed-panels/cisco/cisco-finesse-login.yaml:a028600debd78c0366e81ab960677
 http/exposed-panels/cisco/cisco-integrated-login.yaml:796d5fb30a583a4008697dfcf128e0e2f445e53c
 http/exposed-panels/cisco/cisco-ios-xe-panel.yaml:6501ea1eba98bc5afe96f5d7c8582daaec2a2a8d
 http/exposed-panels/cisco/cisco-ise-admin-panel.yaml:cc308bbba66557a00a16cd5f4a62739f02bf2e0b
-http/exposed-panels/cisco/cisco-meraki-exposure.yaml:b125c6072c56f94bad7afef158db2f7a665d41f8
+http/exposed-panels/cisco/cisco-meraki-exposure.yaml:928e0d336fcc10d0e52010d804e15fa14817ea34
 http/exposed-panels/cisco/cisco-onprem-panel.yaml:610cbaad8dd35ab4d9d62bad9b0d278b32f9979f
 http/exposed-panels/cisco/cisco-prime-infrastructure.yaml:bd7aa5b7a6abd7a846b7f55852812389c8cf0a00
 http/exposed-panels/cisco/cisco-sd-wan.yaml:f738e49ecf545dba4c2cb10a1a2045cbbb0da46b
@@ -9529,7 +9534,7 @@ http/misconfiguration/h2o/h2o-arbitary-file-read.yaml:b9037c3479824c0a534ef6f45b
 http/misconfiguration/h2o/h2o-dashboard.yaml:d3ceb314aa6c5952cebf82c92d4ad23374302443
 http/misconfiguration/hadoop-unauth-rce.yaml:beb63c4aebc7f0d322b28e9da8f8f7e2d04772bb
 http/misconfiguration/haproxy-exporter-metrics.yaml:31b12a064fa3d9d8fa946e0f5e1a4f4b707b33f0
-http/misconfiguration/haproxy-status.yaml:a835595306b67fb85b9df6a1f7c9b93f39dc93ca
+http/misconfiguration/haproxy-status.yaml:f968bb4fb57054c70ab128ffd0e1b556ae56ee45
 http/misconfiguration/hashicorp-consul-unauth.yaml:e58f16591a344adab51c80c5f7e8fcc9eef7f679
 http/misconfiguration/hazelcast-management-exposure.yaml:e2f8ae180e8c58a56a98e4386a14a1d20f19b2fa
 http/misconfiguration/healthchecks-ui-exposure.yaml:4cd367fd68d1c0482de142bd5d5b06b7033edd34
@@ -13508,7 +13513,7 @@ http/vulnerabilities/tp-link-wr840n-auth-bypass.yaml:c4fd0d5810680b4667fe4a5670b
 http/vulnerabilities/ueditor/ueditor-ssrf.yaml:e3dc6e81fdac9d0abedfeffee804c7d533d24273
 http/vulnerabilities/ueditor/ueditor-xss.yaml:bc89193000fa6bcb0ea444c9962995f58622d334
 http/vulnerabilities/ueditor-arbitrary-file-upload.yaml:7bfdacbc85c519a60ec434477239b9d7523a7d4a
-http/vulnerabilities/una-cms-rce.yaml:d1bf3c1db78cc9a5aa6096e4457da01fdbe84cc0
+http/vulnerabilities/una-cms-rce.yaml:3afb1b0e05ef28341407d2f735a9163ab803a851
 http/vulnerabilities/unifi/unifi-create-user.yaml:67175005ad760cf1f527b400d43e8e7bf0266b26
 http/vulnerabilities/unifi/unifi-nfc-credentials.yaml:4bd598e440bc1d7234e85e8af7f02935f6a96d13
 http/vulnerabilities/vbulletin/arcade-php-sqli.yaml:dcf8fc1d1f4d5f6999a0cc988d26dae965866fa1
@@ -14282,7 +14287,7 @@ ssl/tls-version.yaml:396e167fe4dc47cc31a3823287f767ac4ba3ed6d
 ssl/untrusted-root-certificate.yaml:bc78917f6ed97df44ec66fd168e6d3d51f2050a9
 ssl/weak-cipher-suites.yaml:a2c5b71896965bcbb458e1d2a5bcf54981301156
 ssl/wildcard-tls.yaml:93487bb9d9c28bf84ae1928887b0dafef67b4117
-templates-checksum.txt:861b556053c42cd3c4af06b95abc6532db561e24
+templates-checksum.txt:0a706e1f287b2f99d1c12fb168eb824836c4a7e5
 websocket/cves/2026/CVE-2026-102489.yaml:360c9a1d9d05721eda417d4a1b0b674a807a3111
 workflows/74cms-workflow.yaml:bb010e767ad32b906153e36ea618be545b4e22d0
 workflows/acrolinx-workflow.yaml:8434089bb55dec3d7b2ebc6a6f340e73382dd0c4
