@@ -25,7 +25,9 @@ set -uo pipefail
 # Ajouter une ligne ici à chaque nouveau template où upstream prend le dessus.
 # ------------------------------------------------------------------------------
 DIVERGENCES=(
-  "http/cves/2026/CVE-2026-109618.yaml|http/cves/2026/CVE-2026-109618-flawfence.yaml|CVE-2026-109618-flawfence"
+  # (vide) php2shell consolidé sur le template upstream CVE-2026-109618.yaml :
+  # les variantes -flawfence (version seule) et CVE-2026-109619.yaml ont été
+  # supprimées, la détection active upstream couvrant aussi le verdict de version.
 )
 
 info()  { printf '\033[1;34m→ %s\033[0m\n' "$*"; }
