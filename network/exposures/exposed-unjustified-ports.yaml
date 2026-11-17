@@ -6,13 +6,14 @@ info:
   severity: medium
   description: |
     Detects sensitive, should-be-internal services (databases, caches, message
-    brokers, container/orchestration APIs, remote-administration surfaces) exposed
-    on a host that also serves web traffic (80/443 open).
+    brokers, container/orchestration APIs, remote-administration surfaces such as
+    SSH, RDP, VNC or WinRM) exposed on a host that also serves web traffic
+    (80/443 open). SSH is reported on port 22 and, by its banner, on any other port.
     Standard public-facing internet services are treated as justified and are NOT
     reported: web (80/443/8080/8443), mail (SMTP/submission 25/465/587/2525,
-    IMAP 143/993, POP3 110/995), DNS (53), SSH (22) and FTP control (21). Mail,
-    FTP and SSH banners are recognised on non-standard ports too, so mail relays
-    such as OVH's SMTP proxy (e.g. port 5025) are not flagged.
+    IMAP 143/993, POP3 110/995), DNS (53) and FTP control (21). Mail and FTP
+    banners are recognised on non-standard ports too, so mail relays such as
+    OVH's SMTP proxy (e.g. port 5025) are not flagged.
     Only a positively identified sensitive service is reported; an unidentified
     service on a non-standard port is never reported, to avoid false positives.
     Hosts that are not web servers are out of scope and skipped.
@@ -36,13 +37,13 @@ javascript:
       }
 
       // Ports that are legitimately public on internet-facing hosts. Never flag.
-      // web + smtp/submission + imap + pop3 + dns + ssh + ftp-control
+      // web + smtp/submission + imap + pop3 + dns + ftp-control
       var justifiedPorts = {
         80: 1, 443: 1, 8080: 1, 8443: 1,
         25: 1, 465: 1, 587: 1, 2525: 1,
         143: 1, 993: 1,
         110: 1, 995: 1,
-        53: 1, 22: 1, 21: 1
+        53: 1, 21: 1
       };
       if (justifiedPorts[port]) {
         return;
@@ -60,7 +61,7 @@ javascript:
         5672: "RabbitMQ", 15672: "RabbitMQ Management", 9092: "Kafka", 2181: "ZooKeeper",
         61616: "ActiveMQ", 1883: "MQTT",
         3389: "RDP", 5900: "VNC", 5901: "VNC", 5902: "VNC", 6000: "X11",
-        5985: "WinRM", 5986: "WinRM", 445: "SMB", 23: "Telnet"
+        5985: "WinRM", 5986: "WinRM", 445: "SMB", 23: "Telnet", 22: "SSH"
       };
 
       // Only consider hosts that are actually web servers (80 or 443 reachable).
@@ -97,6 +98,11 @@ javascript:
         bt = banner.replace(/^[\s]+/, "");
       }
 
+      // An SSH identification string ("SSH-2.0-...") is a remote-administration
+      // surface whatever the port it listens on, and whatever else its version
+      // string mentions (an SFTP module names "ftp").
+      var isSsh = bt.indexOf("SSH-") === 0;
+
       // A recognised standard public-service banner is justified even on an odd
       // port (e.g. an OVH SMTP proxy on 5025 greets with "220 ...").
       if (bt) {
@@ -104,8 +110,7 @@ javascript:
         if (bt.indexOf("+OK") === 0) return;                               // POP3 greeting
         if (bt.indexOf("* OK") === 0 || bt.indexOf("* PREAUTH") === 0) return; // IMAP greeting
       }
-      if (b) {
-        if (b.indexOf("ssh-") !== -1) return;                              // SSH
+      if (b && !isSsh) {
         if (b.includes("smtp") || b.includes("esmtp") || b.includes("imap") ||
             b.includes("pop3") || b.includes("dovecot") || b.includes("postfix") ||
             b.includes("exim") || b.includes("ftp")) {
@@ -114,7 +119,7 @@ javascript:
       }
 
       // Decide whether this is a sensitive service, by default port or by banner.
-      var service = sensitivePorts[port] || "";
+      var service = isSsh ? "SSH" : (sensitivePorts[port] || "");
       if (!service && b) {
         if (b.includes("mysql") || b.includes("mariadb")) service = "MySQL";
         else if (b.includes("postgres")) service = "PostgreSQL";
